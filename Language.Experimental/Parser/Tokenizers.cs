@@ -42,6 +42,7 @@ public static class Tokenizers
                     new TokenizerRule(TokenTypes.Symbol, "symbol"),
                     new TokenizerRule(TokenTypes.Params, "params"),
                     new TokenizerRule(TokenTypes.Param, "param"),
+                    new TokenizerRule(TokenTypes.Return, "return"),
 
                     new TokenizerRule(TokenTypes.InlineAssembly, "__asm {", enclosingLeft: "__asm {", enclosingRight: "}", ignoreCase: true),
                     new TokenizerRule(TokenTypes.CompilerIntrinsicGet, "_ci_get"),

@@ -18,7 +18,7 @@ namespace Language.Experimental.Compiler.Instructions
 
         public override string Emit()
         {
-            if (IsIndirect) return $"call [{Callee}]";
+            if (IsIndirect) return $"call dword [{Callee}]";
             return $"call {Callee}";
         }
     }

@@ -20,6 +20,7 @@ public static class TokenTypes
     public const string Param = "Param";
     public const string Symbol = "Symbol";
     public const string Library = "Library";
+    public const string Return = "Return";
     public const string InlineAssembly = "InlineAssembly";
     public const string CompilerIntrinsicSet = "CompilerIntrinsicSet";
     public const string CompilerIntrinsicGet = "CompilerIntrinsicGet";

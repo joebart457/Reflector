@@ -38,7 +38,7 @@ public class TypedImportedFunctionDefinition: TypedStatement
         cc.AddImportedFunction(this);
     }
 
-    public TypeInfo GetFunctionPointerType()
+    public FunctionPtrTypeInfo GetFunctionPointerType()
     {
         var intrinsicType = IntrinsicType.StdCall_Function_Ptr_External;
         if (CallingConvention == CallingConvention.Cdecl) intrinsicType = IntrinsicType.Cdecl_Function_Ptr_External;

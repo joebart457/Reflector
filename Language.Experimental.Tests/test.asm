@@ -6,11 +6,25 @@ section '.text' code readable executable
 		Main:
 			_Main@0:
 			push ebp
+			mov ebp, esp
 			sub esp, 4
 			push !str_0
-			call [printf]
+			call indirect_print
+			call eax
 			add esp, 4
+			mov esp, ebp
+			pop ebp
+			ret
+		indirect_print:
+			_indirect_print@0:
+			push ebp
+			mov ebp, esp
+			sub esp, 4
+			push dword [printf]
 			pop eax
+			mov esp, ebp
+			pop ebp
+			ret
 section '.idata' import data readable writeable
 	dd !lib_0_ilt,0,0,RVA !lib_0_name, RVA !lib_0_iat
 	dd 0,0,0,0,0

@@ -68,7 +68,12 @@ public class TypedFunctionDefinition: TypedStatement
         else if (expression is TypedIdentifierExpression id) { }
         else if (expression is TypedInlineAssemblyExpression asm) { }
         else if (expression is TypedLiteralExpression le) { }
+        else if (expression is TypedFunctionPointerExpression fpe) { }
         else if (expression is TypedLocalVariableExpression lve) ls.Add(lve);
+        else if (expression is TypedReturnExpression tre)
+        { 
+            if (tre.ReturnValue != null) ls.AddRange(ExtractLocalVariableExpressionsHelper(tre.ReturnValue)); 
+        }
         else throw new InvalidOperationException($"unsupported expression type {expression.GetType().Name}");
         return ls;
     }
@@ -91,13 +96,14 @@ public class TypedFunctionDefinition: TypedStatement
         foreach (var statement in BodyStatements)
         {
             statement.Compile(cc);
-            cc.AddInstruction(X86Instructions.Pop(X86Register.eax)); // Discard unused result of expression statement
+            if (!statement.TypeInfo.Is(IntrinsicType.Void)) 
+                cc.AddInstruction(X86Instructions.Pop(X86Register.eax)); // Discard unused result of expression statement
         }
 
         cc.ExitFunction();
     }
 
-    public TypeInfo GetFunctionPointerType()
+    public FunctionPtrTypeInfo GetFunctionPointerType()
     {
         var intrinsicType = IntrinsicType.StdCall_Function_Ptr_Internal;
         if (CallingConvention == CallingConvention.Cdecl) intrinsicType = IntrinsicType.Cdecl_Function_Ptr_Internal;

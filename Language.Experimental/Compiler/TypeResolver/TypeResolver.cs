@@ -1,4 +1,5 @@
-﻿using Language.Experimental.Expressions;
+﻿using Language.Experimental.Constants;
+using Language.Experimental.Expressions;
 using Language.Experimental.Models;
 using Language.Experimental.Statements;
 using Language.Experimental.TypedExpressions;
@@ -107,9 +108,21 @@ public class TypeResolver
     }
     internal TypedExpression Resolve(CallExpression callExpression)
     {
-        var callTarget = callExpression.CallTarget.Resolve(this);
+        TypedExpression callTarget; 
+       
+        if (callExpression.CallTarget is IdentifierExpression identifierExpression) 
+            callTarget = ResolveCallTarget(identifierExpression); 
+        else callTarget = callExpression.CallTarget.Resolve(this);
+
         if (!callTarget.TypeInfo.IsFunctionPtr) throw new ParsingException(callExpression.Token, $"expect call target to be of type fn<...,t> but got {callTarget.TypeInfo}");
         var args = callExpression.Arguments.Select(x => x.Resolve(this)).ToList();
+        if (args.Count != callTarget.TypeInfo.FunctionParameterTypes.Count)
+            throw new ParsingException(callExpression.Token, $"parity mismatch in call {callTarget.TypeInfo}: expected {callTarget.TypeInfo.FunctionParameterTypes.Count} arguments but got {args.Count}");
+        for (int i = 0; i < callTarget.TypeInfo.FunctionParameterTypes.Count; i++)
+        {
+            if (!callTarget.TypeInfo.FunctionParameterTypes[i].Equals(args[i].TypeInfo))
+                throw new ParsingException(callExpression.Token, $"call {callTarget.TypeInfo}:expected argument to be off type {callTarget.TypeInfo.FunctionParameterTypes[i]} but got {args[i].TypeInfo}");
+        }
         return new TypedCallExpression(callTarget.TypeInfo.FunctionReturnType, callExpression, callTarget, args);
     }
 
@@ -136,6 +149,24 @@ public class TypeResolver
 
     internal TypedExpression Resolve(IdentifierExpression identifierExpression)
     {
+        var foundType = CurrentFunctionTarget.Parameters.Find(x => x.Name.Lexeme == identifierExpression.Token.Lexeme)?.TypeInfo;
+        if (foundType == null && !_localVariableTypeMap.TryGetValue(identifierExpression.Token.Lexeme, out foundType))
+        {
+            if (_functionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var functionWithMatchingName))
+                return new TypedFunctionPointerExpression(functionWithMatchingName.GetFunctionPointerType().AsReference(), identifierExpression, functionWithMatchingName.FunctionName, false); // identifiers only reference the function address so they can be used as lambdas
+            if (_importedFunctionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var importedFunctionWithMatchingName))
+                return new TypedFunctionPointerExpression(importedFunctionWithMatchingName.GetFunctionPointerType().AsReference(), identifierExpression, importedFunctionWithMatchingName.FunctionName, true);
+        }
+        if (foundType == null)
+            throw new ParsingException(identifierExpression.Token, $"unresolved symbol {identifierExpression.Token.Lexeme}");
+        return new TypedIdentifierExpression(foundType, identifierExpression, identifierExpression.Token);
+    }
+
+    internal TypedExpression ResolveCallTarget(IdentifierExpression identifierExpression)
+    {
+        // Identifiers that are direct call targets will be handled differently IE
+        // (printf msg) 
+        // printf will be resolved to type Cdecl_FunctionPointer_External instead of Cdecl_FunctionPointer
         var foundType = CurrentFunctionTarget.Parameters.Find(x => x.Name.Lexeme == identifierExpression.Token.Lexeme)?.TypeInfo;
         if (foundType == null && !_localVariableTypeMap.TryGetValue(identifierExpression.Token.Lexeme, out foundType))
         {
@@ -180,5 +211,18 @@ public class TypeResolver
         return new TypedLocalVariableExpression(TypeInfo.Void, localVariableExpression, localVariableExpression.Identifier, initializer);
     }
 
-    
+    internal TypedExpression Resolve(ReturnExpression returnExpression)
+    {
+        var returnValue = returnExpression.ReturnValue?.Resolve(this);
+        if (CurrentFunctionTarget.ReturnType.Is(IntrinsicType.Void))
+        {
+            if (returnValue != null) throw new ParsingException(returnExpression.Token, $"unable to return value for function with return type of {IntrinsicType.Void}");
+            else return new TypedReturnExpression(TypeInfo.Void, returnExpression, null);
+        }
+        if (returnValue == null)
+            throw new ParsingException(returnExpression.Token, $"expected return type to match function return type of {CurrentFunctionTarget.ReturnType} but got None");
+        if (!returnValue.TypeInfo.Equals(CurrentFunctionTarget.ReturnType))
+            throw new ParsingException(returnExpression.Token, $"expected return type to match function return type of {CurrentFunctionTarget.ReturnType} but got {returnValue.TypeInfo}");
+        return new TypedReturnExpression(TypeInfo.Void, returnExpression, returnValue);
+    }
 }

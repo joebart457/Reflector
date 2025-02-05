@@ -24,6 +24,13 @@ public class FunctionPtrTypeInfo: TypeInfo
         }
     }
 
+    public FunctionPtrTypeInfo(IntrinsicType intrinsicType, TypeInfo returnType, List<TypeInfo> parameterTypes) : base(intrinsicType, null)
+    {
+        ValidateIntrinsicType();
+        ReturnType = returnType;
+        ParameterTypes = parameterTypes;
+    }
+
     private void ValidateIntrinsicType()
     {
         var isValid = IntrinsicType == IntrinsicType.StdCall_Function_Ptr
@@ -35,6 +42,7 @@ public class FunctionPtrTypeInfo: TypeInfo
         if (!isValid) throw new InvalidOperationException($"cannot initialize FunctionPtrTypeInfo with type {IntrinsicType}");
     }
     public override TypeInfo FunctionReturnType => ReturnType;
+    public override List<TypeInfo> FunctionParameterTypes => ParameterTypes;
     public override bool IsFunctionPtr => true;
 
     public override bool IsInternalFnPtr => IntrinsicType == IntrinsicType.StdCall_Function_Ptr_Internal
@@ -46,6 +54,12 @@ public class FunctionPtrTypeInfo: TypeInfo
 
     private static List<IntrinsicType> _stdcallTypes => [IntrinsicType.StdCall_Function_Ptr, IntrinsicType.StdCall_Function_Ptr_External, IntrinsicType.StdCall_Function_Ptr_Internal];
     private static List<IntrinsicType> _cdeclTypes => [IntrinsicType.Cdecl_Function_Ptr, IntrinsicType.Cdecl_Function_Ptr_External, IntrinsicType.Cdecl_Function_Ptr_Internal];
+
+    public FunctionPtrTypeInfo AsReference()
+    {
+        if (_stdcallTypes.Contains(IntrinsicType)) return new FunctionPtrTypeInfo(IntrinsicType.StdCall_Function_Ptr, ReturnType, ParameterTypes);
+        return new FunctionPtrTypeInfo(IntrinsicType.Cdecl_Function_Ptr, ReturnType, ParameterTypes);
+    }
 
     public override int GetHashCode()
     {

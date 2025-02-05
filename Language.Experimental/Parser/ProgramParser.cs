@@ -247,6 +247,7 @@ public class ProgramParser : TokenParser
         {
             if (AdvanceIfMatch(TokenTypes.CompilerIntrinsicGet)) return ParseCompilerIntrinsicGet();
             if (AdvanceIfMatch(TokenTypes.CompilerIntrinsicSet)) return ParseCompilerIntrinsicSet();
+            if (AdvanceIfMatch(TokenTypes.Return)) return ParseReturn();
             var token = Previous();
             if (AdvanceIfMatch(TokenTypes.RParen))
                 throw new ParsingException(Previous(), "empty call encountered");
@@ -285,6 +286,18 @@ public class ProgramParser : TokenParser
         var valueToAssign = ParseExpression();
         Consume(TokenTypes.RParen, "expect enclosing ) after call to _ci_set");
         return new CompilerIntrinsic_SetExpression(token, contextPointer, offset, valueToAssign);
+    }
+
+    private ExpressionBase ParseReturn()
+    {
+        var token = Previous();
+        ExpressionBase? returnValue = null;
+        if (!AdvanceIfMatch(TokenTypes.RParen))
+        {
+            returnValue = ParseExpression();
+            Consume(TokenTypes.RParen, "expect enclosing ) after return statement");
+        }
+        return new ReturnExpression(token, returnValue);
     }
 
     private ExpressionBase ParseGet()

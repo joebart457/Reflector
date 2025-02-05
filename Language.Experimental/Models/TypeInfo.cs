@@ -39,7 +39,9 @@ public class TypeInfo
     public bool IsValidNormalPtr => IntrinsicType == IntrinsicType.Ptr && GenericTypeArgument != null;
     public virtual bool IsFunctionPtr => false;
     public virtual bool IsInternalFnPtr => false;
-    public virtual TypeInfo FunctionReturnType => throw new InvalidOperationException("invalid function type: expect return type parameter");
+
+    public virtual TypeInfo FunctionReturnType => throw new InvalidOperationException("type is not a function pointer");
+    public virtual List<TypeInfo> FunctionParameterTypes => throw new InvalidOperationException("type is not a function pointer and does not contain parameters");
     public virtual CallingConvention CallingConvention => throw new InvalidOperationException($"unable to determine calling convention of {IntrinsicType}");
 
     public override int GetHashCode()

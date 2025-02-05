@@ -4,5 +4,10 @@
 (import msvcrt cdecl printf:void (params (param msg string)))
 
 (defn Main:void (params)
-	(printf 'Hello world!')
+	((indirect_print) 'Hello world!')
+	(return)
+)
+
+(defn indirect_print:cdecl_function_ptr[string, void] (params)
+	(return printf)
 )

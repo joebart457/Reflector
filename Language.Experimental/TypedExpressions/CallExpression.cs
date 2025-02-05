@@ -40,7 +40,8 @@ public class TypedCallExpression : TypedExpression
         } else
         {
             CallTarget.Compile(cc);
-            cc.AddInstruction(X86Instructions.Call(X86Register.eax.ToString(), true));
+            cc.AddInstruction(X86Instructions.Pop(X86Register.eax));
+            cc.AddInstruction(X86Instructions.Call(X86Register.eax.ToString(), false));
         }
 
         if (callingConvention == CallingConvention.Cdecl) cc.AddInstruction(X86Instructions.Add(X86Register.esp, Arguments.Count * 4));
