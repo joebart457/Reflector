@@ -1,0 +1,8 @@
+
+(library msvcrt `msvcrt.dll`)
+
+(import msvcrt cdecl printf:void (params (param msg string)))
+
+(defn Main:void (params)
+	(printf 'Hello world!')
+)
