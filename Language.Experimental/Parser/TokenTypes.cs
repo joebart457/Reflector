@@ -24,4 +24,13 @@ public static class TokenTypes
     public const string InlineAssembly = "InlineAssembly";
     public const string CompilerIntrinsicSet = "CompilerIntrinsicSet";
     public const string CompilerIntrinsicGet = "CompilerIntrinsicGet";
+    public const string Type = "Type";
+    public const string Field = "Field";
+    public const string Set = "Set";
+
+
+    // The following token types are used purely for inline assembly parsing
+    public const string AssemblyInstruction = "AssemblyInstruction";
+    public const string GeneralRegister32 = "GeneralRegister32";
+    public const string XmmRegister = "XmmRegister";
 }

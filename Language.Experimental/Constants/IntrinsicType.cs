@@ -14,4 +14,5 @@ public enum IntrinsicType
     Cdecl_Function_Ptr_Internal,  // normal function defined in code
     StdCall_Function_Ptr_External, // imported function from dll
     Cdecl_Function_Ptr_External, // imported function from dll
+    Struct,
 }

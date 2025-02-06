@@ -1,5 +1,6 @@
 ﻿using Language.Experimental.Constants;
 using System.Runtime.InteropServices;
+using TokenizerCore.Interfaces;
 
 
 namespace Language.Experimental.Models;
@@ -22,12 +23,15 @@ public class TypeInfo
             || IntrinsicType == IntrinsicType.StdCall_Function_Ptr_External
             || IntrinsicType == IntrinsicType.Cdecl_Function_Ptr
             || IntrinsicType == IntrinsicType.Cdecl_Function_Ptr_Internal
-            || IntrinsicType == IntrinsicType.Cdecl_Function_Ptr_External;
+            || IntrinsicType == IntrinsicType.Cdecl_Function_Ptr_External
+            || IntrinsicType == IntrinsicType.Struct;
         if (isInvalid) throw new InvalidOperationException($"cannot initialize TypeInfo with type {IntrinsicType}");
         if (IntrinsicType == IntrinsicType.Ptr && GenericTypeArgument == null) throw new InvalidOperationException($"type {IntrinsicType} requires one type argument");
     }
 
-    public int StackSize() => 4;
+    public virtual int SizeInMemory() => 4;
+    public virtual int StackSize() => 4;
+    public virtual bool IsStackAllocatable => IntrinsicType != IntrinsicType.Struct && IntrinsicType != IntrinsicType.Void;
     public static TypeInfo Integer => new TypeInfo(IntrinsicType.Int, null);
     public static TypeInfo Float => new TypeInfo(IntrinsicType.Float, null);
     public static TypeInfo String => new TypeInfo(IntrinsicType.String, null);
@@ -37,13 +41,14 @@ public class TypeInfo
 
     public bool Is(IntrinsicType type) => IntrinsicType == type;
     public bool IsValidNormalPtr => IntrinsicType == IntrinsicType.Ptr && GenericTypeArgument != null;
+    public virtual bool IsStructType => false;
     public virtual bool IsFunctionPtr => false;
     public virtual bool IsInternalFnPtr => false;
-
     public virtual TypeInfo FunctionReturnType => throw new InvalidOperationException("type is not a function pointer");
     public virtual List<TypeInfo> FunctionParameterTypes => throw new InvalidOperationException("type is not a function pointer and does not contain parameters");
     public virtual CallingConvention CallingConvention => throw new InvalidOperationException($"unable to determine calling convention of {IntrinsicType}");
-
+    public virtual int GetFieldOffset(IToken fieldName) => throw new InvalidOperationException($"type is not a struct type and does not contain any members");
+    public virtual TypeInfo GetFieldType(IToken fieldName) => throw new InvalidOperationException($"type is not a struct type and does not contain any members");
     public override int GetHashCode()
     {
         return IntrinsicType.GetHashCode();

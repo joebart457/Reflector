@@ -19,4 +19,6 @@ public class TypedIdentifierExpression : TypedExpression
         var offset = cc.GetIdentifierOffset(Token, out bool isfunctionParameter);
         cc.AddInstruction(X86Instructions.Push(offset));
     }
+
+    public RegisterOffset GetMemoryOffset(X86CompilationContext cc) => cc.GetIdentifierOffset(Token, out _);
 }

@@ -3,6 +3,11 @@
 
 (import msvcrt cdecl printf:void (params (param msg string)))
 
+(type myType
+	(field msg string)
+)
+
+
 (defn Main:void (params)
 	((indirect_print) 'Hello world!')
 	(return)

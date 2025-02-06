@@ -5,6 +5,9 @@ using Language.Experimental.Statements;
 using Language.Experimental.TypedExpressions;
 using Language.Experimental.TypedStatements;
 using ParserLite.Exceptions;
+using TokenizerCore.Interfaces;
+using TokenizerCore.Model;
+using TokenizerCore.Models.Constants;
 
 namespace Language.Experimental.Compiler.TypeResolver;
 
@@ -16,13 +19,14 @@ public class TypeResolver
     private Dictionary<string, TypedFunctionDefinition> _functionDefinitions = new();
     private Dictionary<string, TypedImportedFunctionDefinition> _importedFunctionDefinitions = new();
     private Dictionary<string, TypedImportLibraryDefinition> _importLibraries = new();
+    private List<TypedFunctionDefinition> _lambdaFunctions = new();
     public IEnumerable<TypedStatement> Resolve(List<StatementBase> statements)
     {
         GatherSignatures(statements);
         foreach(var statement in statements)
         {
             yield return statement.Resolve(this);
-        }
+        }                                                                                                                                                                                                                                                                            
         yield break;
     }
 
@@ -43,6 +47,10 @@ public class TypeResolver
     {
         if (functionDefinition.Parameters.DistinctBy(x => x.Name.Lexeme).Count() != functionDefinition.Parameters.Count)
             throw new ParsingException(functionDefinition.FunctionName, $"redefinition of parameter name");
+
+        var invalidParameter = functionDefinition.Parameters.Find(x => !x.TypeInfo.IsStackAllocatable);
+        if (invalidParameter != null)
+            throw new ParsingException(functionDefinition.FunctionName, $"invalid parameter type {invalidParameter.TypeInfo}. Type is not stack allocatable");
 
         var functionBody = new List<TypedExpression>();
 
@@ -88,6 +96,10 @@ public class TypeResolver
     {
         if (importedFunctionDefinition.Parameters.DistinctBy(x => x.Name.Lexeme).Count() != importedFunctionDefinition.Parameters.Count)
             throw new ParsingException(importedFunctionDefinition.FunctionName, $"redefinition of parameter name");
+
+        var invalidParameter = importedFunctionDefinition.Parameters.Find(x => !x.TypeInfo.IsStackAllocatable);
+        if (invalidParameter != null)
+            throw new ParsingException(importedFunctionDefinition.FunctionName, $"invalid parameter type {invalidParameter.TypeInfo}. Type is not stack allocatable");
 
         if (_functionDefinitions.ContainsKey(importedFunctionDefinition.FunctionName.Lexeme))
             throw new ParsingException(importedFunctionDefinition.FunctionName, $"redefinition of function {importedFunctionDefinition.FunctionName.Lexeme}");
@@ -144,7 +156,13 @@ public class TypeResolver
 
     internal TypedExpression Resolve(GetExpression getExpression)
     {
-        throw new NotImplementedException();
+        var instance = getExpression.Instance.Resolve(this);
+        if (instance.TypeInfo.IsValidNormalPtr && instance.TypeInfo.GenericTypeArgument!.IsStructType)
+        {
+            var fieldType = instance.TypeInfo.GetFieldType(getExpression.TargetField);
+            return new TypedGetExpression(fieldType, getExpression, instance, getExpression.TargetField, getExpression.ShortCircuitOnNull);
+        }
+        throw new ParsingException(getExpression.Token, $"expect valid pointer type on left hand side of member accessor");
     }
 
     internal TypedExpression Resolve(IdentifierExpression identifierExpression)
@@ -180,6 +198,15 @@ public class TypeResolver
         return new TypedIdentifierExpression(foundType, identifierExpression, identifierExpression.Token);
     }
 
+    internal TypedExpression ResolveSetTarget(IdentifierExpression identifierExpression)
+    {
+        var foundType = CurrentFunctionTarget.Parameters.Find(x => x.Name.Lexeme == identifierExpression.Token.Lexeme)?.TypeInfo;
+        if (foundType == null) _localVariableTypeMap.TryGetValue(identifierExpression.Token.Lexeme, out foundType);
+        if (foundType == null)
+            throw new ParsingException(identifierExpression.Token, $"unresolved symbol {identifierExpression.Token.Lexeme}");
+        return new TypedIdentifierExpression(foundType, identifierExpression, identifierExpression.Token);
+    }
+
     internal TypedExpression Resolve(InlineAssemblyExpression inlineAssemblyExpression)
     {
         return new TypedInlineAssemblyExpression(TypeInfo.Void, inlineAssemblyExpression, inlineAssemblyExpression.Assembly);
@@ -200,6 +227,8 @@ public class TypeResolver
 
     internal TypedExpression Resolve(LocalVariableExpression localVariableExpression)
     {
+        if (!localVariableExpression.TypeInfo.IsStackAllocatable)
+            throw new ParsingException(localVariableExpression.Token, $"unable to create local variable of type {localVariableExpression.TypeInfo}");
         if (CurrentFunctionTarget.Parameters.Any(x => x.Name.Lexeme == localVariableExpression.Identifier.Lexeme))
             throw new ParsingException(localVariableExpression.Identifier, $"symbol {localVariableExpression.Identifier.Lexeme} is already defined as a parameter");
         if (_localVariableTypeMap.ContainsKey(localVariableExpression.Identifier.Lexeme))
@@ -225,4 +254,50 @@ public class TypeResolver
             throw new ParsingException(returnExpression.Token, $"expected return type to match function return type of {CurrentFunctionTarget.ReturnType} but got {returnValue.TypeInfo}");
         return new TypedReturnExpression(TypeInfo.Void, returnExpression, returnValue);
     }
+
+    internal TypedExpression Resolve(SetExpression setExpression)
+    {
+        TypedExpression setTarget;
+        if (setExpression.AssignmentTarget is IdentifierExpression identifierExpression)
+        {
+            setTarget = ResolveSetTarget(identifierExpression);
+        }
+        else if (setExpression.AssignmentTarget is GetExpression getExpression)
+        {
+            setTarget = Resolve(getExpression);
+        }
+        else throw new ParsingException(setExpression.Token, $"expect assignment target to be identifier or member accessor");
+        var valueToAssign = setExpression.ValueToAssign.Resolve(this);
+        if (!valueToAssign.TypeInfo.IsStackAllocatable)
+            throw new ParsingException(setExpression.ValueToAssign.Token, $"invalid value transfer (type {valueToAssign.TypeInfo})");
+        if (!setTarget.TypeInfo.Equals(valueToAssign.TypeInfo))
+            throw new ParsingException(setExpression.Token, $"type mismatch: expected assignment value to be of type {setTarget.TypeInfo} but got {valueToAssign.TypeInfo}");
+        return new TypedSetExpression(setTarget.TypeInfo, setExpression, setTarget, valueToAssign);
+    }
+    internal TypedExpression Resolve(CastExpression castExpression)
+    {
+        // We will trust the programmer on casts and only disallow casting to struct types bigger than 4 bytes
+        var resolvedExpression = castExpression.Expression.Resolve(this);
+        if (castExpression.TypeInfo.IsStackAllocatable || castExpression.TypeInfo.SizeInMemory() == 4)
+        {
+            resolvedExpression.TypeInfo = castExpression.TypeInfo;
+            return resolvedExpression;
+        }
+        throw new ParsingException(castExpression.Token, $"unable to cast type {resolvedExpression.TypeInfo} to type {castExpression.TypeInfo}");
+    }
+
+    internal TypedExpression Resolve(LambdaExpression lambdaExpression)
+    {
+        // For lambdas we will simply pull out the function definition and return a reference to the function as an (unique, generated) identifier
+        var anonymousToken = GetAnonymousFunctionLabel(lambdaExpression.FunctionDefinition.Token.Location.Line, lambdaExpression.FunctionDefinition.Token.Location.Column);
+        lambdaExpression.FunctionDefinition.FunctionName = anonymousToken;
+        GatherSignature(lambdaExpression.FunctionDefinition);
+        var flattenedLambda = (TypedFunctionDefinition)Resolve(lambdaExpression.FunctionDefinition);
+        _lambdaFunctions.Add(flattenedLambda);
+        return Resolve(new IdentifierExpression(anonymousToken));
+    }
+
+    private IToken GetAnonymousFunctionLabel(int row, int column) => new Token(BuiltinTokenTypes.Word, $"_anonymous__!{AnonymousFunctionIndex++}", row, column);
+
+    private int AnonymousFunctionIndex = 0;
 }
