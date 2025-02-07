@@ -7,14 +7,14 @@ namespace Language.Experimental.TypedExpressions;
 
 public class TypedInlineAssemblyExpression : TypedExpression
 {
-    public string Assembly { get; set; }
-    public TypedInlineAssemblyExpression(TypeInfo typeInfo, ExpressionBase originalExpression, string assembly) : base(typeInfo, originalExpression)
+    public X86Instruction AssemblyInstruction { get; set; }
+    public TypedInlineAssemblyExpression(TypeInfo typeInfo, ExpressionBase originalExpression, X86Instruction assemblyInstruction) : base(typeInfo, originalExpression)
     {
-        Assembly = assembly;
+        AssemblyInstruction = assemblyInstruction;
     }
 
     public override void Compile(X86CompilationContext cc)
     {
-        cc.AddInstruction(X86Instructions.RawAsm(Assembly));
+        cc.AddInstruction(AssemblyInstruction);
     }
 }

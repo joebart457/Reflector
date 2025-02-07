@@ -33,4 +33,9 @@ public static class TokenTypes
     public const string AssemblyInstruction = "AssemblyInstruction";
     public const string GeneralRegister32 = "GeneralRegister32";
     public const string XmmRegister = "XmmRegister";
+    public const string ByteRegister = "ByteRegister";
+    public const string Byte = "Byte";
+
+    public const string Plus = "Plus";
+    public const string Minus = "Minus";
 }

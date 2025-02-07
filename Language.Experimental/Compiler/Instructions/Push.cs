@@ -47,16 +47,14 @@ namespace Language.Experimental.Compiler.Instructions
     public class Push_Address : X86Instruction
     {
         public string Address { get; set; }
-        public bool IsIndirect { get; set; }
-        public Push_Address(string address, bool isIndirect)
+        public Push_Address(string address)
         {
             Address = address;
-            IsIndirect = isIndirect;
         }
 
         public override string Emit()
         {
-            return $"push {(IsIndirect ? $"dword [{Address}]" : Address)}";
+            return $"push {Address}";
         }
     }
 

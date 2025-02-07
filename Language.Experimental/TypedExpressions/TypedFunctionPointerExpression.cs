@@ -20,6 +20,6 @@ public class TypedFunctionPointerExpression : TypedExpression
     {
         if (IsImportedFunction)
             cc.AddInstruction(X86Instructions.Push(Offset.CreateSymbolOffset(FunctionSymbol.Lexeme, 0)));
-        else cc.AddInstruction(X86Instructions.Push(FunctionSymbol.Lexeme, false));
+        else cc.AddInstruction(X86Instructions.Push(FunctionSymbol.Lexeme));
     }
 }

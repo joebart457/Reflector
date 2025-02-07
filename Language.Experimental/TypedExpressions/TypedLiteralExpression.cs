@@ -21,7 +21,7 @@ public class TypedLiteralExpression : TypedExpression
         if (Value is string str)
         {
             var label = cc.AddStringData(str);
-            cc.AddInstruction(X86Instructions.Push(label, false));
+            cc.AddInstruction(X86Instructions.Push(label));
         }
         else if (Value == null)
         {
@@ -34,7 +34,7 @@ public class TypedLiteralExpression : TypedExpression
         else if (Value is float f)
         {
             var label = cc.AddSinglePrecisionFloatingPointData(f);
-            cc.AddInstruction(X86Instructions.Push(label, true));
+            cc.AddInstruction(X86Instructions.Push(Offset.CreateSymbolOffset(label, 0)));
         }
         else
         {

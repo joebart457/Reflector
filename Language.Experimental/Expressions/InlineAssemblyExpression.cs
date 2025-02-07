@@ -1,5 +1,6 @@
 ﻿
 
+using Language.Experimental.Compiler.Instructions;
 using Language.Experimental.Compiler.TypeResolver;
 using Language.Experimental.TypedExpressions;
 using TokenizerCore.Interfaces;
@@ -8,10 +9,10 @@ namespace Language.Experimental.Expressions;
 
 public class InlineAssemblyExpression : ExpressionBase
 {
-    public string Assembly { get; set; }
-    public InlineAssemblyExpression(IToken token, string assembly) : base(token)
+    public X86Instruction AssemblyInstruction { get; set; }
+    public InlineAssemblyExpression(IToken token, X86Instruction assemblyInstruction) : base(token)
     {
-        Assembly = assembly;
+        AssemblyInstruction = assemblyInstruction;
     }
 
     public override TypedExpression Resolve(TypeResolver typeResolver)

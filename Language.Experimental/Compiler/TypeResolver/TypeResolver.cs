@@ -209,7 +209,7 @@ public class TypeResolver
 
     internal TypedExpression Resolve(InlineAssemblyExpression inlineAssemblyExpression)
     {
-        return new TypedInlineAssemblyExpression(TypeInfo.Void, inlineAssemblyExpression, inlineAssemblyExpression.Assembly);
+        return new TypedInlineAssemblyExpression(TypeInfo.Void, inlineAssemblyExpression, inlineAssemblyExpression.AssemblyInstruction);
     }
 
     internal TypedExpression Resolve(LiteralExpression literalExpression)

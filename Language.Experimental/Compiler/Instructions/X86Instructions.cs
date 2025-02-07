@@ -4,19 +4,12 @@ namespace Language.Experimental.Compiler.Instructions;
 
 public static class X86Instructions
 {
-    public static RawAsm RawAsm(string text) => new RawAsm(text);
     public static Cdq Cdq() => new Cdq();
 
-    public static X86Instruction Push(IOffset source)
-    {
-        if (source is RegisterOffset registerOffset) return Push(registerOffset);
-        else if (source is SymbolOffset symbolOffset) return Push(symbolOffset);
-        else throw new InvalidOperationException();
-    }
 
     public static Push_Register Push(X86Register register) => new Push_Register(register);
     public static Push_Offset Push(RegisterOffset offset) => new Push_Offset(offset);
-    public static Push_Address Push(string address, bool isIndirect) => new Push_Address(address, isIndirect);
+    public static Push_Address Push(string address) => new Push_Address(address);
     public static Push_Immediate<int> Push(int immediateValue) => new Push_Immediate<int>(immediateValue);
     public static Push_SymbolOffset Push(SymbolOffset offset) => new Push_SymbolOffset(offset);
 
