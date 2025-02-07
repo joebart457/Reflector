@@ -20,5 +20,5 @@ public class TypedIdentifierExpression : TypedExpression
         cc.AddInstruction(X86Instructions.Push(offset));
     }
 
-    public RegisterOffset GetMemoryOffset(X86CompilationContext cc) => cc.GetIdentifierOffset(Token, out _);
+    public RegisterOffset GetMemoryOffset(X86CompilationContext cc) => cc.GetIdentifierOffset(Token);
 }

@@ -1,8 +1,7 @@
 ﻿using Language.Experimental.Compiler.Instructions;
 using Language.Experimental.Constants;
-using Language.Experimental.Expressions;
-using Language.Experimental.Models;
-using Language.Experimental.Statements;
+using Language.Experimental.UnresolvedExpressions;
+using Language.Experimental.UnresolvedStatements;
 using ParserLite;
 using ParserLite.Exceptions;
 using System.Runtime.InteropServices;
@@ -57,7 +56,7 @@ public class AssemblyInstructionParsingRule
 public class ProgramParser : TokenParser
 {
     private Tokenizer _tokenizer;
-    private Dictionary<string, StructTypeInfo> _userDefinedTypes = new();
+    private Dictionary<string, GenericTypeSymbol> _validScopedGenericTypeParameters = new();
     private List<AssemblyInstructionParsingRule> _assemblyParsingRules = new()
     {
                         new(AssemblyInstruction.Cdq, [],
@@ -394,6 +393,11 @@ public class ProgramParser : TokenParser
                                 var callee = p.ParseSymbolOffset();
                                 return X86Instructions.Call(callee.Symbol, true);
                         }),
+                new(AssemblyInstruction.Call, [InstructionParseUnit.RegisterOffset],
+                        (p) => {
+                                var callee = p.ParseRegisterOffset();
+                                return X86Instructions.Call(callee);
+                        }),
                 new(AssemblyInstruction.Label, [InstructionParseUnit.Symbol],
                         (p) => {
                                 var text = p.ParseSymbol();
@@ -500,17 +504,16 @@ public class ProgramParser : TokenParser
     {
         _tokenizer = Tokenizers.Default;
     }
-    public List<StatementBase> ParseFile(string path, out List<ParsingException> errors)
+    public UnresolvedParsingResult ParseFile(string path, out List<ParsingException> errors)
     {
         return ParseText(File.ReadAllText(path), out errors);
     }
 
-    public List<StatementBase> ParseText(string text, out List<ParsingException> errors)
+    public UnresolvedParsingResult ParseText(string text, out List<ParsingException> errors)
     {
         var tokenizer = Tokenizers.Default;
         errors = new List<ParsingException>();
-        _userDefinedTypes = new();
-        var statements = new List<StatementBase>();
+        var result = new UnresolvedParsingResult();
 
         var tokens = tokenizer.Tokenize(text, false)
             .Where(token => token.Type != BuiltinTokenTypes.EndOfFile)
@@ -521,9 +524,16 @@ public class ProgramParser : TokenParser
         {
             try
             {
+                _validScopedGenericTypeParameters = new();
                 var next = ParseNext();
                 if (next == null) break;
-                else statements.Add(next);
+                if (next is TypeDefinition typeDefinition) result.TypeDefinitions.Add(typeDefinition);
+                else if (next is GenericTypeDefinition genericTypeDefinition) result.GenericTypeDefinitions.Add(genericTypeDefinition);
+                else if (next is UnresolvedFunctionDefinition functionDefinition) result.FunctionDefinitions.Add(functionDefinition);
+                else if (next is GenericFunctionDefinition genericFunctionDefinition) result.GenericFunctionDefinitions.Add(genericFunctionDefinition);
+                else if (next is UnresolvedImportedFunctionDefinition importedFunctionDefinition) result.ImportedFunctionDefinitions.Add(importedFunctionDefinition);
+                else if (next is UnresolvedImportLibraryDefinition importLibraryDefinition) result.ImportLibraryDefinitions.Add(importLibraryDefinition);
+                else throw new ParsingException(next.Token, $"unsupported statement type {next.GetType().Name}");
             }
             catch (ParsingException e)
             {
@@ -531,7 +541,7 @@ public class ProgramParser : TokenParser
                 SeekToNextParsableUnit();
             }
         }
-        return statements;
+        return result;
     }
 
     private void SeekToNextParsableUnit()
@@ -543,127 +553,66 @@ public class ProgramParser : TokenParser
         }
     }
 
-    private void SkipOverEnclosingParenthesis()
-    {
-        int lParenCount = 1;
-        while (!AtEnd())
-        {
-            Advance();
-            if (Match(TokenTypes.LParen)) lParenCount++;
-            if (Match(TokenTypes.RParen))
-            {
-                lParenCount--;
-                if (lParenCount == 0)
-                {
-                    Advance();
-                    break;
-                }
-            }
-        }
-    }
-
-    public void ParseUserTypes()
-    {
-        GatherTypeSignatures();
-        ParseTypeDefinitions();
-        SeekBeginning();
-    }
-
-    private StatementBase? ParseNext()
+    private UnresolvedStatementBase? ParseNext()
     {
         return ParseStatement();
     }
 
-    private void GatherTypeSignatures()
+    private UnresolvedStatementBase ParseTypeDefinition()
     {
-        SeekBeginning();
-        while (!AtEnd())
+        var name = Consume(BuiltinTokenTypes.Word, "expect type name");
+        List<GenericTypeSymbol> genericTypeParameters = new();
+        if (AdvanceIfMatch(TokenTypes.LBracket))
         {
-            if (AdvanceIfMatch(TokenTypes.LParen))
+            do
             {
-                if (AdvanceIfMatch(TokenTypes.Type)) GatherTypeSignature();
-                else SkipOverEnclosingParenthesis();
-            }
-            else throw new ParsingException(Current(), "expect top-level statement");
-        }      
-    }
-
-    private void ParseTypeDefinitions()
-    {
-        SeekBeginning();
-        while (!AtEnd())
-        {
-            if (AdvanceIfMatch(TokenTypes.LParen))
-            {
-                if (AdvanceIfMatch(TokenTypes.Type)) ParseTypeDefinition();
-                else SkipOverEnclosingParenthesis();
-            }
-            else throw new ParsingException(Current(), "expect top-level statement");
+                genericTypeParameters.Add(ParseGenericTypeSymbol());
+            } while (AdvanceIfMatch(TokenTypes.Comma));
+            Consume(TokenTypes.RBracket, "expect enclosing ] after generic type parameter list");
         }
-    }
-
-    private void GatherTypeSignature()
-    {
-        var name = Consume(BuiltinTokenTypes.Word, "expect type name");
-        if (_userDefinedTypes.ContainsKey(name.Lexeme))
-            throw new ParsingException(name, $"redefinition of type {name.Lexeme}");
-        SkipOverEnclosingParenthesis();
-    }
-
-    private void ParseTypeDefinition()
-    {
-        var name = Consume(BuiltinTokenTypes.Word, "expect type name");
-        if (!_userDefinedTypes.TryGetValue(name.Lexeme, out var foundType))
-            throw new ParsingException(name, $"type has not been defined properly {name.Lexeme}");
-        
+        var fields = new List<TypeDefinitionField>();
         do
         {
             Consume(TokenTypes.LParen, "expect field definition");
             Consume(TokenTypes.Field, "expect field definition. IE (field x int)");
             var fieldName = Consume(BuiltinTokenTypes.Word, "expect field name");
-            var typeInfo = ParseTypeInfo();
-            if (typeInfo.Is(IntrinsicType.Void) || typeInfo.IsStructType)
-                throw new ParsingException(fieldName, $"invalid field type {typeInfo}");
+            var typeInfo = ParseTypeSymbol();
+            
             Consume(TokenTypes.RParen, "expect enclosing ) in field definition");
-            foundType.Fields.Add(new StructFieldInfo(typeInfo, fieldName));
+            fields.Add(new(typeInfo, fieldName));
         } while (!AtEnd() && !Match(TokenTypes.RParen));
         Consume(TokenTypes.RParen, "expect enclosing ) in type definition");
-        foundType.ValidateFields();
+        if (genericTypeParameters.Any()) return new GenericTypeDefinition(name, genericTypeParameters, fields);
+        return new TypeDefinition(name, fields);
     }
 
-    public TypeInfo ParseTypeInfo()
+    public TypeSymbol ParseTypeSymbol()
     {
-        if (!AdvanceIfMatch(TokenTypes.IntrinsicType))
+        var typeName = Consume(BuiltinTokenTypes.Word, "expect type annotation");
+        if (_validScopedGenericTypeParameters.TryGetValue(typeName.Lexeme, out var genericTypeSymbol)) return genericTypeSymbol;
+        List<TypeSymbol> typeArguments = new();
+        if (AdvanceIfMatch(TokenTypes.LBracket))
         {
-            var typeName = Consume(BuiltinTokenTypes.Word, "expect type annotation");
-            if (_userDefinedTypes.TryGetValue(typeName.Lexeme, out var userType)) return userType;
-            else throw new ParsingException(Current(), "expect builtin or user type annotation");
-        }
-        if (!Enum.TryParse<IntrinsicType>(Previous().Lexeme, true, out var type))
-            throw new ParsingException(Previous(), $"unsupported type annotation {Previous().Lexeme}");
-        if (RequiresTypeArgument(type))
-        {
-            Consume(TokenTypes.LBracket, $"expect type argument for type {type}");
-            if (SupportsMultipleTypeArguments(type))
+            do
             {
-                List<TypeInfo> typeArguments = new();
-                do
-                {
-                    var typeArgument = ParseTypeInfo();
-                    typeArguments.Add(typeArgument);
-                } while (AdvanceIfMatch(TokenTypes.Comma));
-                Consume(TokenTypes.RBracket, "expect enclosing ] after type arguments");
-                return new FunctionPtrTypeInfo(type, typeArguments);
-
-            }else
-            {
-                var typeArgument = ParseTypeInfo();
-                Consume(TokenTypes.RBracket, "expect enclosing ] after type argument");
-                return new TypeInfo(type, typeArgument);
-            }
-
+                var typeArgument = ParseTypeSymbol();
+                typeArguments.Add(typeArgument);
+            } while (AdvanceIfMatch(TokenTypes.Comma));
+            Consume(TokenTypes.RBracket, "expect enclosing ] after type arguments");
         }
-        return new TypeInfo(type, null);
+        
+        return new TypeSymbol(typeName, typeArguments);
+    }
+
+    private GenericTypeSymbol ParseGenericTypeSymbol()
+    {
+        Consume(TokenTypes.Gen, "expect generic symbol");
+        var typeSymbol = Consume(BuiltinTokenTypes.Word, "expect type annotation");
+        if (_validScopedGenericTypeParameters.ContainsKey(typeSymbol.Lexeme))
+            throw new ParsingException(typeSymbol, $"redefintion of generic parameter with name {typeSymbol.Lexeme}");
+        var genericTypeSymbol = new GenericTypeSymbol(typeSymbol);
+        _validScopedGenericTypeParameters[typeSymbol.Lexeme] = genericTypeSymbol;
+        return genericTypeSymbol;
     }
 
     private bool RequiresTypeArgument(IntrinsicType type)
@@ -686,37 +635,44 @@ public class ProgramParser : TokenParser
             || type == IntrinsicType.Cdecl_Function_Ptr_External;
     }
 
-    public StatementBase? ParseStatement()
+    public UnresolvedStatementBase? ParseStatement()
     {
         if (AtEnd()) return null;
         Consume(TokenTypes.LParen, "expect all statements to begin with (");
         if (AdvanceIfMatch(TokenTypes.DefineFunction)) return ParseFunctionDefinition();
         if (AdvanceIfMatch(TokenTypes.Import)) return ParseImportedFunctionDefinition();
         if (AdvanceIfMatch(TokenTypes.Library)) return ParseImportLibraryDefinition();
-        if (AdvanceIfMatch(TokenTypes.Type))
-        {
-            // Types have already been parsed so skip parsing them a second time
-            SkipOverEnclosingParenthesis();
-            return ParseStatement();
-        }
+        if (AdvanceIfMatch(TokenTypes.Type)) return ParseTypeDefinition();
         throw new ParsingException(Current(), $"unexpected token {Current()}");
     }
 
-    public FunctionDefinition ParseFunctionDefinition(bool isLambda = false)
+    public UnresolvedStatementBase ParseFunctionDefinition(bool isLambda = false)
     {
         /*
          * (defn main:int (params (param argc int) (param argv ptr[string]))
          * 
-         * 
+         *  (defn add[gen T]:T (params (param x gen T) (param y gen T))
          */
         IToken name;
-        if (!isLambda) name = Consume(BuiltinTokenTypes.Word, "expect function name");
+        var genericTypeParameters = new List<GenericTypeSymbol>();
+        if (!isLambda)
+        {
+            name = Consume(BuiltinTokenTypes.Word, "expect function name");
+            if (AdvanceIfMatch(TokenTypes.LBracket))
+            {
+                do
+                {
+                    genericTypeParameters.Add(ParseGenericTypeSymbol());
+                } while (AdvanceIfMatch(TokenTypes.Comma));
+                Consume(TokenTypes.RBracket, "expect enclosing ] after generic type parameter list");
+            }
+        }
         else name = Previous();
         Consume(TokenTypes.Colon, "expect functionName:returnType");
-        var returnType = ParseTypeInfo();
+        var returnType = ParseTypeSymbol();
         Consume(TokenTypes.LParen, "expect parameter list");
         Consume(TokenTypes.Params, "expect paramter list. IE (params (param argc int) (param argv ptr<string>))");
-        var parameters = new List<Parameter>();
+        var parameters = new List<UnresolvedParameter>();
         if (!AdvanceIfMatch(TokenTypes.RParen))
         {
             do
@@ -724,13 +680,13 @@ public class ProgramParser : TokenParser
                 Consume(TokenTypes.LParen, "expect parameter definition");
                 Consume(TokenTypes.Param, "expect parameter definition");
                 var parameterName = Consume(BuiltinTokenTypes.Word, "expect parameter name");
-                var parameterType = ParseTypeInfo();
+                var parameterType = ParseTypeSymbol();
                 Consume(TokenTypes.RParen, "expect enclosing ) in parameter definition");
-                parameters.Add(new Parameter(parameterName, parameterType));
+                parameters.Add(new(parameterName, parameterType));
             } while(!AtEnd() && !Match(TokenTypes.RParen));
             Consume(TokenTypes.RParen, "expect enclosing ) in parameter list");
         }
-        var body = new List<ExpressionBase>();
+        var body = new List<UnresolvedExpressionBase>();
         if (!AdvanceIfMatch(TokenTypes.RParen))
         {
             do
@@ -739,12 +695,50 @@ public class ProgramParser : TokenParser
             } while (!AtEnd() && !Match(TokenTypes.RParen));
             Consume(TokenTypes.RParen, "expect enclosing ) in function body");
         }
-        return new FunctionDefinition(name, returnType, parameters, body);
+        if (genericTypeParameters.Any()) return new GenericFunctionDefinition(name, genericTypeParameters, returnType, parameters, body);
+        return new UnresolvedFunctionDefinition(name, returnType, parameters, body);
+    }
+
+    public UnresolvedFunctionDefinition ParseLambdaFunctionDefinition()
+    {
+        /*
+         * (defn int (params (param argc int) (param argv ptr[string]))
+         * 
+         * 
+         */
+        IToken name = Previous();   
+        var returnType = ParseTypeSymbol();
+        Consume(TokenTypes.LParen, "expect parameter list");
+        Consume(TokenTypes.Params, "expect paramter list. IE (params (param argc int) (param argv ptr<string>))");
+        var parameters = new List<UnresolvedParameter>();
+        if (!AdvanceIfMatch(TokenTypes.RParen))
+        {
+            do
+            {
+                Consume(TokenTypes.LParen, "expect parameter definition");
+                Consume(TokenTypes.Param, "expect parameter definition");
+                var parameterName = Consume(BuiltinTokenTypes.Word, "expect parameter name");
+                var parameterType = ParseTypeSymbol();
+                Consume(TokenTypes.RParen, "expect enclosing ) in parameter definition");
+                parameters.Add(new(parameterName, parameterType));
+            } while (!AtEnd() && !Match(TokenTypes.RParen));
+            Consume(TokenTypes.RParen, "expect enclosing ) in parameter list");
+        }
+        var body = new List<UnresolvedExpressionBase>();
+        if (!AdvanceIfMatch(TokenTypes.RParen))
+        {
+            do
+            {
+                body.Add(ParseExpression());
+            } while (!AtEnd() && !Match(TokenTypes.RParen));
+            Consume(TokenTypes.RParen, "expect enclosing ) in function body");
+        }
+        return new UnresolvedFunctionDefinition(name, returnType, parameters, body);
     }
 
 
 
-    public ImportedFunctionDefinition ParseImportedFunctionDefinition()
+    public UnresolvedImportedFunctionDefinition ParseImportedFunctionDefinition()
     {
         /*
          * (import mscvrt cdecl (symbol `_printf`) 
@@ -756,7 +750,7 @@ public class ProgramParser : TokenParser
         var callingConvention = ParseCallingConvention();
         var functionName = Consume(BuiltinTokenTypes.Word, "expect function name");
         Consume(TokenTypes.Colon, "expect functionName:returnType");
-        var returnType = ParseTypeInfo();
+        var returnType = ParseTypeSymbol();
         IToken importSymbol = functionName;
         if (Match(TokenTypes.LParen) && PeekMatch(1, TokenTypes.Symbol))
         {
@@ -767,7 +761,7 @@ public class ProgramParser : TokenParser
         }
         Consume(TokenTypes.LParen, "expect parameter list");
         Consume(TokenTypes.Params, "expect paramter list. IE (params (param argc int) (param argv ptr<string>))");
-        var parameters = new List<Parameter>();
+        var parameters = new List<UnresolvedParameter>();
         if (!AdvanceIfMatch(TokenTypes.RParen))
         {
             do
@@ -775,17 +769,17 @@ public class ProgramParser : TokenParser
                 Consume(TokenTypes.LParen, "expect parameter definition");
                 Consume(TokenTypes.Param, "expect parameter definition");
                 var parameterName = Consume(BuiltinTokenTypes.Word, "expect parameter name");
-                var parameterType = ParseTypeInfo();
+                var parameterType = ParseTypeSymbol();
                 Consume(TokenTypes.RParen, "expect enclosing ) in parameter definition");
-                parameters.Add(new Parameter(parameterName, parameterType));
+                parameters.Add(new(parameterName, parameterType));
             } while (!AtEnd() && !Match(TokenTypes.RParen));
             Consume(TokenTypes.RParen, "expect enclosing ) in parameter list");
         }
         Consume(TokenTypes.RParen, "expect enclosing ) after imported function definition");
-        return new ImportedFunctionDefinition(functionName, returnType, parameters, callingConvention, libraryAlias, importSymbol);
+        return new UnresolvedImportedFunctionDefinition(functionName, returnType, parameters, callingConvention, libraryAlias, importSymbol);
     }
 
-    public ImportLibraryDefinition ParseImportLibraryDefinition()
+    public UnresolvedImportLibraryDefinition ParseImportLibraryDefinition()
     {
         /*
          * (library mscvrt `msvcrt.dll`)
@@ -796,7 +790,7 @@ public class ProgramParser : TokenParser
         var libraryPath = Consume(BuiltinTokenTypes.Word, "expect path to dll");
         Consume(TokenTypes.RParen, "expect enclosing ) after import library definition");    
 
-        return new ImportLibraryDefinition(libraryAlias, libraryPath);
+        return new UnresolvedImportLibraryDefinition(libraryAlias, libraryPath);
     }
 
     private CallingConvention ParseCallingConvention()
@@ -808,21 +802,21 @@ public class ProgramParser : TokenParser
         return callingConvention;
     }
 
-    public ExpressionBase ParseExpression()
+    public UnresolvedExpressionBase ParseExpression()
     {
         if (AdvanceIfMatch(TokenTypes.LBracket)) return ParseCast();
         return ParseCall();
     }
 
-    private ExpressionBase ParseCast()
+    private UnresolvedExpressionBase ParseCast()
     {
         var token = Previous();
-        var typeInfo = ParseTypeInfo();
+        var typeInfo = ParseTypeSymbol();
         Consume(TokenTypes.RBracket, "expect enclosing ] in cast");
         var expression = ParseExpression();
-        return new CastExpression(token, typeInfo, expression);
+        return new UnresolvedCastExpression(token, typeInfo, expression);
     }
-    private ExpressionBase ParseCall()
+    private UnresolvedExpressionBase ParseCall()
     {
         if (AdvanceIfMatch(TokenTypes.LParen))
         {
@@ -835,7 +829,7 @@ public class ProgramParser : TokenParser
             if (AdvanceIfMatch(TokenTypes.RParen))
                 throw new ParsingException(Previous(), "empty call encountered");
             var callTarget = ParseExpression();
-            var arguments = new List<ExpressionBase>();
+            var arguments = new List<UnresolvedExpressionBase>();
             if (!AdvanceIfMatch(TokenTypes.RParen))
             {
                 do
@@ -844,113 +838,89 @@ public class ProgramParser : TokenParser
                 } while (!AtEnd() && !Match(TokenTypes.RParen));
                 Consume(TokenTypes.RParen, "expect enclosing ) after call");
             }
-            return new CallExpression(token, callTarget, arguments);
+            return new UnresolvedCallExpression(token, callTarget, arguments);
         }
         else return ParseGet();
 
     }
 
-    private ExpressionBase ParseCompilerIntrinsicGet()
+    private UnresolvedExpressionBase ParseCompilerIntrinsicGet()
     {
         var token = Previous(); 
         Consume(TokenTypes.Colon, "expect _ci_get:returnType");
-        var returnType = ParseTypeInfo();
+        var returnType = ParseTypeSymbol();
         var contextPointer = ParseExpression();
         int offset = int.Parse(Consume(BuiltinTokenTypes.Integer, "expect integer offset").Lexeme);
         Consume(TokenTypes.RParen, "expect enclosing ) after call to _ci_get");
-        return new CompilerIntrinsic_GetExpression(token, returnType, contextPointer, offset);
+        return new UnresolvedCompilerIntrinsic_GetExpression(token, returnType, contextPointer, offset);
     }
 
-    private ExpressionBase ParseCompilerIntrinsicSet()
+    private UnresolvedExpressionBase ParseCompilerIntrinsicSet()
     {
         var token = Previous();
         var contextPointer = ParseExpression();
         int offset = int.Parse(Consume(BuiltinTokenTypes.Integer, "expect integer offset to memory location").Lexeme);
         var valueToAssign = ParseExpression();
         Consume(TokenTypes.RParen, "expect enclosing ) after call to _ci_set");
-        return new CompilerIntrinsic_SetExpression(token, contextPointer, offset, valueToAssign);
+        return new UnresolvedCompilerIntrinsic_SetExpression(token, contextPointer, offset, valueToAssign);
     }
 
-    private ExpressionBase ParseReturn()
+    private UnresolvedExpressionBase ParseReturn()
     {
         var token = Previous();
-        ExpressionBase? returnValue = null;
+        UnresolvedExpressionBase? returnValue = null;
         if (!AdvanceIfMatch(TokenTypes.RParen))
         {
             returnValue = ParseExpression();
             Consume(TokenTypes.RParen, "expect enclosing ) after return statement");
         }
-        return new ReturnExpression(token, returnValue);
+        return new UnresolvedReturnExpression(token, returnValue);
     }
 
-    private ExpressionBase ParseLambdaFunction()
+    private UnresolvedExpressionBase ParseLambdaFunction()
     {
-        return new LambdaExpression(Previous(), ParseFunctionDefinition(true));
+        return new UnresolvedLambdaExpression(Previous(), ParseLambdaFunctionDefinition());
     }
 
-    private ExpressionBase ParseSet()
+    private UnresolvedExpressionBase ParseSet()
     {
         var assignmentTarget = ParseExpression();
         var valueToAssign = ParseExpression();
-        return new SetExpression(Previous(), assignmentTarget, valueToAssign);
+        return new UnresolvedSetExpression(Previous(), assignmentTarget, valueToAssign);
     }
 
-    private ExpressionBase ParseAssemblyInstruction()
-    {
-        foreach(var assemblyParsingRule in _assemblyParsingRules)
-        {
-            if (assemblyParsingRule.CanParse(this))
-            {
-                var token = Previous();
-                var instruction = assemblyParsingRule.Parse(this);
-                Consume(TokenTypes.RParen, "expect enclosing ) after assembly instruction");
-                return new InlineAssemblyExpression(token, instruction);
-            }
-        }
-
-        throw new ParsingException(Previous(), "expect inline assembly instruction");
-    }
-
-    private bool TryParseGeneralRegister32(X86Register register)
-    {
-        if (AdvanceIfMatch(TokenTypes.GeneralRegister32))
-        {
-            if (!Enum.TryParse<X86Register>(Previous().Lexeme, true, out register))
-                throw new ParsingException(Previous(), $"unsupported general register {Previous().Lexeme}");
-            return true;
-        }
-        return false;
-    }
-
-    private bool TryParseXmmRegister(XmmRegister register)
-    {
-        if (AdvanceIfMatch(TokenTypes.GeneralRegister32))
-        {
-            if (!Enum.TryParse<XmmRegister>(Previous().Lexeme, true, out register))
-                throw new ParsingException(Previous(), $"unsupported xmm register {Previous().Lexeme}");
-            return true;
-        }
-        return false;
-    }
-
-    private ExpressionBase ParseGet()
+    private UnresolvedExpressionBase ParseGet()
     {
 
         var expr = ParsePrimary();
-        if (expr is IdentifierExpression identifierExpression)
+        if (expr is UnresolvedIdentifierExpression identifierExpression)
         {
-            while (Match(TokenTypes.Dot) || Match(TokenTypes.NullDot))
+            while (Match(TokenTypes.Dot) || Match(TokenTypes.NullDot) || Match(TokenTypes.LBracket))
             {
                 if (AdvanceIfMatch(TokenTypes.Dot))
                 {
                     var targetField = Consume(BuiltinTokenTypes.Word, "expect member name after '.'");
-                    expr = new GetExpression(Previous(), expr, targetField, false);
+                    expr = new UnresolvedGetExpression(Previous(), expr, targetField, false);
+                }
+                else if (AdvanceIfMatch(TokenTypes.LBracket))
+                {
+                    var typeArguments = new List<TypeSymbol>();
+                    if (!AdvanceIfMatch(TokenTypes.RBracket))
+                    {
+                        do
+                        {
+                            typeArguments.Add(ParseTypeSymbol());
+                        } while (AdvanceIfMatch(TokenTypes.Comma));
+                        Consume(TokenTypes.RBracket, "expect enclosing ] after type arguments list");
+                    }
+                    // return here, no chaining allowed
+                    return new GenericFunctionReferenceExpression(identifierExpression.Token, typeArguments);
                 }
                 else
                 {
                     Advance();
                     var targetField = Consume(BuiltinTokenTypes.Word, "expect member name after '?.'");
-                    expr = new GetExpression(Previous(), expr, targetField, true);
+                    expr = new UnresolvedGetExpression(Previous(), expr, targetField, true);
                 }
             }
         }
@@ -959,27 +929,43 @@ public class ProgramParser : TokenParser
         return expr;
     }
 
-    private ExpressionBase ParsePrimary()
+    private UnresolvedExpressionBase ParsePrimary()
     {
-        if (AdvanceIfMatch(BuiltinTokenTypes.Word)) return new IdentifierExpression(Previous());
+        if (AdvanceIfMatch(BuiltinTokenTypes.Word)) return new UnresolvedIdentifierExpression(Previous());
         return ParseLiteral();
     }
 
-    public LiteralExpression ParseLiteral()
+    public UnresolvedLiteralExpression ParseLiteral()
     {
         if (AdvanceIfMatch(BuiltinTokenTypes.Integer))
         {
-            return new LiteralExpression(Previous(), int.Parse(Previous().Lexeme));
+            return new UnresolvedLiteralExpression(Previous(), int.Parse(Previous().Lexeme));
         }
         if (AdvanceIfMatch(BuiltinTokenTypes.Float))
         {
-            return new LiteralExpression(Previous(), float.Parse(Previous().Lexeme));
+            return new UnresolvedLiteralExpression(Previous(), float.Parse(Previous().Lexeme));
         }
         if (AdvanceIfMatch(BuiltinTokenTypes.String))
         {
-            return new LiteralExpression(Previous(), Previous().Lexeme);
+            return new UnresolvedLiteralExpression(Previous(), Previous().Lexeme);
         }
         throw new ParsingException(Current(), $"encountered unexpected token {Current()}");
+    }
+
+    private UnresolvedExpressionBase ParseAssemblyInstruction()
+    {
+        foreach (var assemblyParsingRule in _assemblyParsingRules)
+        {
+            if (assemblyParsingRule.CanParse(this))
+            {
+                var token = Previous();
+                var instruction = assemblyParsingRule.Parse(this);
+                Consume(TokenTypes.RParen, "expect enclosing ) after assembly instruction");
+                return new UnresolvedInlineAssemblyExpression(token, instruction);
+            }
+        }
+
+        throw new ParsingException(Previous(), "expect inline assembly instruction");
     }
 
     public bool CanParse(AssemblyInstruction instruction, ref int tokenOffset)

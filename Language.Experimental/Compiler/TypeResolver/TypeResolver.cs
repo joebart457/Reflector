@@ -1,6 +1,7 @@
 ﻿using Language.Experimental.Constants;
 using Language.Experimental.Expressions;
 using Language.Experimental.Models;
+using Language.Experimental.Parser;
 using Language.Experimental.Statements;
 using Language.Experimental.TypedExpressions;
 using Language.Experimental.TypedStatements;
@@ -20,24 +21,40 @@ public class TypeResolver
     private Dictionary<string, TypedImportedFunctionDefinition> _importedFunctionDefinitions = new();
     private Dictionary<string, TypedImportLibraryDefinition> _importLibraries = new();
     private List<TypedFunctionDefinition> _lambdaFunctions = new();
-    public IEnumerable<TypedStatement> Resolve(List<StatementBase> statements)
+    public IEnumerable<TypedStatement> Resolve(ParsingResult parsingResult)
     {
-        GatherSignatures(statements);
-        foreach(var statement in statements)
+        GatherSignatures(parsingResult);
+        foreach(var statement in parsingResult.ImportLibraryDefinitions)
         {
             yield return statement.Resolve(this);
-        }                                                                                                                                                                                                                                                                            
+        }
+        foreach (var statement in parsingResult.ImportedFunctionDefinitions)
+        {
+            yield return statement.Resolve(this);
+        }
+        foreach (var statement in parsingResult.FunctionDefinitions)
+        {
+            yield return statement.Resolve(this);
+        }
         yield break;
     }
 
-    public void GatherSignatures(List<StatementBase> statements)
+    public void GatherSignatures(ParsingResult parsingResult)
     {
         _localVariableTypeMap = new();
         _functionDefinitions = new();
         _importedFunctionDefinitions = new();
         _importLibraries = new();
         _currentFunctionTarget = null;
-        foreach (var statement in statements)
+        foreach (var statement in parsingResult.ImportLibraryDefinitions)
+        {
+            statement.GatherSignature(this);
+        }
+        foreach (var statement in parsingResult.ImportedFunctionDefinitions)
+        {
+            statement.GatherSignature(this);
+        }
+        foreach (var statement in parsingResult.FunctionDefinitions)
         {
             statement.GatherSignature(this);
         }
@@ -133,7 +150,7 @@ public class TypeResolver
         for (int i = 0; i < callTarget.TypeInfo.FunctionParameterTypes.Count; i++)
         {
             if (!callTarget.TypeInfo.FunctionParameterTypes[i].Equals(args[i].TypeInfo))
-                throw new ParsingException(callExpression.Token, $"call {callTarget.TypeInfo}:expected argument to be off type {callTarget.TypeInfo.FunctionParameterTypes[i]} but got {args[i].TypeInfo}");
+                throw new ParsingException(callExpression.Token, $"call {callTarget.TypeInfo}:expected argument to be of type {callTarget.TypeInfo.FunctionParameterTypes[i]} but got {args[i].TypeInfo}");
         }
         return new TypedCallExpression(callTarget.TypeInfo.FunctionReturnType, callExpression, callTarget, args);
     }

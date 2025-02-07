@@ -33,9 +33,15 @@ public class TypedCallExpression : TypedExpression
             if (idExpr.TypeInfo.IsInternalFnPtr)
             {
                 cc.AddInstruction(X86Instructions.Call(idExpr.Token.Lexeme, false));
-            }else
+            }
+            else if (idExpr.TypeInfo.IsInternalFnPtr)
             {
                 cc.AddInstruction(X86Instructions.Call(idExpr.Token.Lexeme, true));
+            }
+            else
+            {
+                var offset = cc.GetIdentifierOffset(idExpr.Token);
+                cc.AddInstruction(X86Instructions.Call(offset));
             }
         } else
         {

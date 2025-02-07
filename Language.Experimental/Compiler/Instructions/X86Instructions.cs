@@ -98,6 +98,7 @@ public static class X86Instructions
     public static Cmp_Byte_Byte Cmp(X86ByteRegister operand1, X86ByteRegister operand2) => new Cmp_Byte_Byte(operand1, operand2);
 
     public static Call Call(string callee, bool isIndirect) => new Call(callee, isIndirect);
+    public static Call_RegisterOffset Call(RegisterOffset offset) => new Call_RegisterOffset(offset);
     public static Label Label(string text) => new Label(text);
     public static Ret Ret() => new Ret();
     public static Ret_Immediate Ret(int immediate) => new Ret_Immediate(immediate);

@@ -9,10 +9,17 @@
 
 
 (defn Main:void (params)
-	((indirect_print) 'Hello world!')
+	(doCallThenPrint[cfn_ptr[string, void]] printf)
 	(return)
 )
 
-(defn indirect_print:cdecl_function_ptr[string, void] (params)
+(defn indirect_print:cfn_ptr[string, void] (params)
 	(return printf)
+)
+
+
+(defn doCallThenPrint[gen T]:void (params (param func T))
+	(func 'test')
+	((indirect_print) 'Hello world!')
+	(return)
 )

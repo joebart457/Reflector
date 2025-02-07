@@ -11,7 +11,6 @@ public static class TokenTypes
     public const string NullDot = "NullDot";
     public const string Comma = "Comma";
     public const string Colon = "Colon";
-    public const string IntrinsicType = "IntrinsicType";
     public const string CallingConvention = "CallingConvention";
 
     public const string DefineFunction = "DefineFunction";
@@ -27,6 +26,7 @@ public static class TokenTypes
     public const string Type = "Type";
     public const string Field = "Field";
     public const string Set = "Set";
+    public const string Gen = "Gen";
 
 
     // The following token types are used purely for inline assembly parsing

@@ -4,6 +4,7 @@ using TokenizerCore.Models.Constants;
 using TokenizerCore;
 using System.Runtime.InteropServices;
 using Language.Experimental.Constants;
+using Language.Experimental.Compiler.Instructions;
 
 namespace Language.Experimental.Parser;
 
@@ -21,17 +22,17 @@ public static class Tokenizers
                     new TokenizerRule(TokenTypes.Colon, ":"),
                     new TokenizerRule(TokenTypes.Comma, ","),
 
-                    new TokenizerRule(TokenTypes.IntrinsicType, IntrinsicType.String.ToString(), ignoreCase: true),
-                    new TokenizerRule(TokenTypes.IntrinsicType, IntrinsicType.StdCall_Function_Ptr.ToString(), ignoreCase: true),
-                    new TokenizerRule(TokenTypes.IntrinsicType, IntrinsicType.StdCall_Function_Ptr_External.ToString(), ignoreCase: true),
-                    new TokenizerRule(TokenTypes.IntrinsicType, IntrinsicType.StdCall_Function_Ptr_Internal.ToString(), ignoreCase: true),
-                    new TokenizerRule(TokenTypes.IntrinsicType, IntrinsicType.Cdecl_Function_Ptr.ToString(), ignoreCase: true),
-                    new TokenizerRule(TokenTypes.IntrinsicType, IntrinsicType.Cdecl_Function_Ptr_External.ToString(), ignoreCase: true),
-                    new TokenizerRule(TokenTypes.IntrinsicType, IntrinsicType.Cdecl_Function_Ptr_Internal.ToString(), ignoreCase: true),
-                    new TokenizerRule(TokenTypes.IntrinsicType, IntrinsicType.Float.ToString(), ignoreCase: true),
-                    new TokenizerRule(TokenTypes.IntrinsicType, IntrinsicType.Int.ToString(), ignoreCase: true),
-                    new TokenizerRule(TokenTypes.IntrinsicType, IntrinsicType.Ptr.ToString(), ignoreCase: true),
-                    new TokenizerRule(TokenTypes.IntrinsicType, IntrinsicType.Void.ToString(), ignoreCase: true),
+                    new TokenizerRule(BuiltinTokenTypes.Word, "string", IntrinsicType.String.ToString()),
+                    new TokenizerRule(BuiltinTokenTypes.Word, "fn_ptr", IntrinsicType.StdCall_Function_Ptr.ToString()),
+                    new TokenizerRule(BuiltinTokenTypes.Word, "fn_ptr_external", IntrinsicType.StdCall_Function_Ptr_External.ToString()),
+                    new TokenizerRule(BuiltinTokenTypes.Word, "fn_ptr_internal", IntrinsicType.StdCall_Function_Ptr_Internal.ToString()),
+                    new TokenizerRule(BuiltinTokenTypes.Word, "cfn_ptr", IntrinsicType.Cdecl_Function_Ptr.ToString()),
+                    new TokenizerRule(BuiltinTokenTypes.Word, "cfn_ptr_external", IntrinsicType.Cdecl_Function_Ptr_External.ToString()),
+                    new TokenizerRule(BuiltinTokenTypes.Word, "cfn_ptr_external", IntrinsicType.Cdecl_Function_Ptr_Internal.ToString()),
+                    new TokenizerRule(BuiltinTokenTypes.Word, "float", IntrinsicType.Float.ToString()),
+                    new TokenizerRule(BuiltinTokenTypes.Word, "int", IntrinsicType.Int.ToString()),
+                    new TokenizerRule(BuiltinTokenTypes.Word, "ptr", IntrinsicType.Ptr.ToString()),
+                    new TokenizerRule(BuiltinTokenTypes.Word, "void", IntrinsicType.Void.ToString()),
 
                     new TokenizerRule(TokenTypes.CallingConvention, CallingConvention.Cdecl.ToString(), ignoreCase: true),
                     new TokenizerRule(TokenTypes.CallingConvention, CallingConvention.StdCall.ToString(), ignoreCase: true),
@@ -43,6 +44,7 @@ public static class Tokenizers
                     new TokenizerRule(TokenTypes.Params, "params"),
                     new TokenizerRule(TokenTypes.Param, "param"),
                     new TokenizerRule(TokenTypes.Return, "return"),
+                    new TokenizerRule(TokenTypes.Gen, "gen"),
 
                     new TokenizerRule(TokenTypes.Type, "type"),
                     new TokenizerRule(TokenTypes.Field, "field"),
@@ -50,6 +52,21 @@ public static class Tokenizers
                     new TokenizerRule(TokenTypes.InlineAssembly, "__asm {", enclosingLeft: "__asm {", enclosingRight: "}", ignoreCase: true),
                     new TokenizerRule(TokenTypes.CompilerIntrinsicGet, "_ci_get"),
                     new TokenizerRule(TokenTypes.CompilerIntrinsicSet, "_ci_set"),
+
+                    new TokenizerRule(TokenTypes.ByteRegister, X86ByteRegister.al.ToString()),
+                    new TokenizerRule(TokenTypes.ByteRegister, X86ByteRegister.bl.ToString()),
+
+                    new TokenizerRule(TokenTypes.GeneralRegister32, X86Register.eax.ToString()),
+                    new TokenizerRule(TokenTypes.GeneralRegister32, X86Register.ebx.ToString()),
+                    new TokenizerRule(TokenTypes.GeneralRegister32, X86Register.ecx.ToString()),
+                    new TokenizerRule(TokenTypes.GeneralRegister32, X86Register.edx.ToString()),
+                    new TokenizerRule(TokenTypes.GeneralRegister32, X86Register.esi.ToString()),
+                    new TokenizerRule(TokenTypes.GeneralRegister32, X86Register.edi.ToString()),
+                    new TokenizerRule(TokenTypes.GeneralRegister32, X86Register.esp.ToString()),
+                    new TokenizerRule(TokenTypes.GeneralRegister32, X86Register.ebp.ToString()),
+
+                    new TokenizerRule(TokenTypes.XmmRegister, XmmRegister.xmm0.ToString()),
+                    new TokenizerRule(TokenTypes.XmmRegister, XmmRegister.xmm1.ToString()),
 
                     new TokenizerRule(BuiltinTokenTypes.EndOfLineComment, "//"),
                     new TokenizerRule(BuiltinTokenTypes.String, "\"", enclosingLeft: "\"", enclosingRight: "\""),

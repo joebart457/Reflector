@@ -8,7 +8,8 @@ namespace Language.Experimental.Compiler;
 public class X86ProgramCompiler
 {
     private readonly ProgramParser _parser = new();
-    private readonly TypeResolver.TypeResolver _resolver = new();
+    private readonly TypeSymbolResolver _typeSymbolResolver = new();
+    private readonly TypeResolver.TypeResolver _typeResolver = new();
     private readonly X86AssemblyOptimizer _optimizer = new();
     public string? EmitBinary(CompilationOptions compilationOptions)
     {
@@ -18,9 +19,10 @@ public class X86ProgramCompiler
 
     public CompilationResult Compile(CompilationOptions options)
     {
-        var parserResult = _parser.ParseFile(options.InputPath, out var errors);
+        var unresolvedParserResult = _parser.ParseFile(options.InputPath, out var errors);
         if (errors.Any()) throw new AggregateException(errors);
-        var resolverResult = _resolver.Resolve(parserResult);
+        var parserResult = _typeSymbolResolver.Resolve(unresolvedParserResult);
+        var resolverResult = _typeResolver.Resolve(parserResult);
         return Compile(resolverResult.ToList(), options);
     }
 

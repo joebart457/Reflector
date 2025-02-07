@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿
 namespace Language.Experimental.Compiler.Instructions
 {
     public class Call : X86Instruction
@@ -19,6 +14,20 @@ namespace Language.Experimental.Compiler.Instructions
         public override string Emit()
         {
             if (IsIndirect) return $"call dword [{Callee}]";
+            return $"call {Callee}";
+        }
+    }
+
+    public class Call_RegisterOffset : X86Instruction
+    {
+        public RegisterOffset Callee { get; set; }
+        public Call_RegisterOffset(RegisterOffset callee)
+        {
+            Callee = callee;
+        }
+
+        public override string Emit()
+        {
             return $"call {Callee}";
         }
     }
