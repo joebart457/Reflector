@@ -1,4 +1,5 @@
 ﻿using Language.Experimental.Constants;
+using Language.Experimental.Parser;
 using ParserLite.Exceptions;
 using TokenizerCore.Interfaces;
 
@@ -71,6 +72,33 @@ public class StructTypeInfo : TypeInfo
         }
         return false;
     }
+
+    public override bool TryExtractGenericArgumentTypes(Dictionary<TypeSymbol, TypeInfo> genericParameterToArgumentTypeMap, TypeSymbol parameterType)
+    {
+        // Note parameter type is the actual function parameter type, not the type parameter type
+        if (parameterType.IsGenericTypeSymbol)
+        {
+            if (genericParameterToArgumentTypeMap.TryGetValue(parameterType, out var resolvedTypeArgument))
+            {
+                if (!resolvedTypeArgument.Equals(this)) return false;
+                return true;
+            }
+            genericParameterToArgumentTypeMap[parameterType] = this;
+            return true;
+        }
+        if (parameterType.TypeName.Lexeme != Name.Lexeme) return false;
+        if (GenericTypeArgument != null)
+        {
+            if (parameterType.TypeArguments.Count == 1) return GenericTypeArgument.TryExtractGenericArgumentTypes(genericParameterToArgumentTypeMap, parameterType.TypeArguments[0]);
+            return false;
+        }
+        return parameterType.TypeArguments.Count == 0;
+    }
+
+    public override TypeSymbol ToTypeSymbol()
+    {
+        return new TypeSymbol(Name, []);
+    }
 }
 
 public class StructFieldInfo
@@ -83,6 +111,4 @@ public class StructFieldInfo
         TypeInfo = typeInfo;
         Name = name;
     }
-
-
 }

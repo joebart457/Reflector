@@ -1,26 +1,26 @@
-﻿using Language.Experimental.Compiler.Instructions;
+﻿using Language.Experimental.Compiler.TypeResolver;
+using Language.Experimental.Expressions;
 using Language.Experimental.Parser;
-using Language.Experimental.Statements;
-using Language.Experimental.UnresolvedExpressions;
+using Language.Experimental.TypedStatements;
 using ParserLite.Exceptions;
 using System.Runtime.InteropServices;
 using TokenizerCore.Interfaces;
 using TokenizerCore.Model;
 
-namespace Language.Experimental.UnresolvedStatements;
+namespace Language.Experimental.Statements;
 
 
-public class GenericFunctionDefinition : UnresolvedStatementBase
+public class GenericFunctionDefinition : StatementBase
 {
     public IToken FunctionName { get; set; }
     public List<GenericTypeSymbol> GenericTypeParameters { get; set; }
     public TypeSymbol ReturnType { get; set; }
-    public List<UnresolvedParameter> Parameters { get; set; }
-    public List<UnresolvedExpressionBase> BodyStatements { get; set; }
+    public List<Parameter> Parameters { get; set; }
+    public List<ExpressionBase> BodyStatements { get; set; }
     public CallingConvention CallingConvention { get; set; }
     public bool IsExported { get; set; }
 
-    public GenericFunctionDefinition(IToken functionName, List<GenericTypeSymbol> genericTypeParameters, TypeSymbol returnType, List<UnresolvedParameter> parameters, List<UnresolvedExpressionBase> bodyStatements) : base(functionName)
+    public GenericFunctionDefinition(IToken functionName, List<GenericTypeSymbol> genericTypeParameters, TypeSymbol returnType, List<Parameter> parameters, List<ExpressionBase> bodyStatements) : base(functionName)
     {
         FunctionName = functionName;
         GenericTypeParameters = genericTypeParameters;
@@ -38,7 +38,7 @@ public class GenericFunctionDefinition : UnresolvedStatementBase
         throw new NotImplementedException();
     }
 
-    public UnresolvedFunctionDefinition ToFunctionDefinition(List<TypeSymbol> typeArguments)
+    public FunctionDefinition ToFunctionDefinition(List<TypeSymbol> typeArguments)
     {
         var unresolvedTypeParameter = typeArguments.Find(x => x.IsGenericTypeSymbol || x.ContainsGenericTypeSymbol);
         if (unresolvedTypeParameter != null)
@@ -54,7 +54,7 @@ public class GenericFunctionDefinition : UnresolvedStatementBase
             genericToConcreteTypeMap[GenericTypeParameters[i]] = typeArguments[i];
         }
 
-        var newParameters = Parameters.Select(x => new UnresolvedParameter(x.Name, x.TypeSymbol)).ToList();
+        var newParameters = Parameters.Select(x => new Parameter(x.Name, x.TypeSymbol)).ToList();
         foreach (var parameter in newParameters)
         {
             parameter.TypeSymbol = parameter.TypeSymbol.ReplaceGenericTypeParameter(genericToConcreteTypeMap);
@@ -63,18 +63,23 @@ public class GenericFunctionDefinition : UnresolvedStatementBase
         if (unresolvedTypeParameter != null)
             throw new ParsingException(FunctionName, $"invalid generic type arguments: unresolved generic type parameter {unresolvedTypeParameter}");
         var newBodyStatements = BodyStatements.Select(x => x.ReplaceGenericTypeSymbols(genericToConcreteTypeMap)).ToList();
-        
+
         var instantiatedFunctionName = $"{FunctionName.Lexeme}!{string.Join('_', typeArguments.Select(x => x.GetFlattenedName()))}";
         var instantiatedFunctionNameToken = new Token(FunctionName.Type, instantiatedFunctionName, FunctionName.Location.Line, FunctionName.Location.Column);
 
         var returnType = ReturnType.ReplaceGenericTypeParameter(genericToConcreteTypeMap);
 
-        return new UnresolvedFunctionDefinition(instantiatedFunctionNameToken, returnType, newParameters, newBodyStatements, CallingConvention, IsExported, instantiatedFunctionNameToken);
+        return new FunctionDefinition(instantiatedFunctionNameToken, returnType, newParameters, newBodyStatements, CallingConvention, IsExported, instantiatedFunctionNameToken);
 
     }
 
-    public override StatementBase Resolve(TypeSymbolResolver typeSymbolResolver)
+    public override void GatherSignature(TypeResolver typeResolver)
     {
-        throw new InvalidOperationException();
+        typeResolver.GatherSignature(this);
+    }
+
+    public override TypedStatement Resolve(TypeResolver typeResolver)
+    {
+        throw new NotImplementedException();
     }
 }

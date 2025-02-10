@@ -1,8 +1,7 @@
-﻿
-using Language.Experimental.Parser;
+﻿using Language.Experimental.Parser;
 using TokenizerCore.Interfaces;
 
-namespace Language.Experimental.UnresolvedStatements;
+namespace Language.Experimental.Statements;
 
 public class TypeDefinitionField
 {

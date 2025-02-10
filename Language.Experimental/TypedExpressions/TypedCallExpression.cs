@@ -34,7 +34,7 @@ public class TypedCallExpression : TypedExpression
             {
                 cc.AddInstruction(X86Instructions.Call(idExpr.Token.Lexeme, false));
             }
-            else if (idExpr.TypeInfo.IsInternalFnPtr)
+            else if (idExpr.TypeInfo.IsExternalFnPtr)
             {
                 cc.AddInstruction(X86Instructions.Call(idExpr.Token.Lexeme, true));
             }

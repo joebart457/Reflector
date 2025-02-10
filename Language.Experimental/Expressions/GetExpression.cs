@@ -1,4 +1,5 @@
 ﻿using Language.Experimental.Compiler.TypeResolver;
+using Language.Experimental.Parser;
 using Language.Experimental.TypedExpressions;
 using TokenizerCore.Interfaces;
 
@@ -19,5 +20,10 @@ public class GetExpression : ExpressionBase
     public override TypedExpression Resolve(TypeResolver typeResolver)
     {
         return typeResolver.Resolve(this);
+    }
+
+    public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
+    {
+        return new GetExpression(Token, Instance.ReplaceGenericTypeSymbols(genericToConcreteTypeMap), TargetField, ShortCircuitOnNull);
     }
 }

@@ -1,5 +1,5 @@
-﻿using Language.Experimental.Compiler;
-using Language.Experimental.Compiler.TypeResolver;
+﻿using Language.Experimental.Compiler.TypeResolver;
+using Language.Experimental.Parser;
 using Language.Experimental.TypedExpressions;
 using TokenizerCore.Interfaces;
 
@@ -18,5 +18,10 @@ public class CallExpression : ExpressionBase
     public override TypedExpression Resolve(TypeResolver typeResolver)
     {
         return typeResolver.Resolve(this);
+    }
+
+    public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
+    {
+        return new CallExpression(Token, CallTarget.ReplaceGenericTypeSymbols(genericToConcreteTypeMap), Arguments.Select(x => x.ReplaceGenericTypeSymbols(genericToConcreteTypeMap)).ToList());
     }
 }

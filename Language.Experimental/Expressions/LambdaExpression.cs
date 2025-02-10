@@ -1,4 +1,5 @@
 ﻿using Language.Experimental.Compiler.TypeResolver;
+using Language.Experimental.Parser;
 using Language.Experimental.Statements;
 using Language.Experimental.TypedExpressions;
 using TokenizerCore.Interfaces;
@@ -16,5 +17,10 @@ public class LambdaExpression : ExpressionBase
     public override TypedExpression Resolve(TypeResolver typeResolver)
     {
         return typeResolver.Resolve(this);
+    }
+
+    public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
+    {
+        return new LambdaExpression(Token, FunctionDefinition.ReplaceGenericTypeSymbols(genericToConcreteTypeMap));
     }
 }

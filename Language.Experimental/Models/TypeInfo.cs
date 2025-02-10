@@ -1,6 +1,10 @@
 ﻿using Language.Experimental.Constants;
+using Language.Experimental.Parser;
+using ParserLite.Exceptions;
 using System.Runtime.InteropServices;
 using TokenizerCore.Interfaces;
+using TokenizerCore.Model;
+using TokenizerCore.Models.Constants;
 
 
 namespace Language.Experimental.Models;
@@ -44,6 +48,7 @@ public class TypeInfo
     public virtual bool IsStructType => false;
     public virtual bool IsFunctionPtr => false;
     public virtual bool IsInternalFnPtr => false;
+    public virtual bool IsExternalFnPtr => false;
     public virtual TypeInfo FunctionReturnType => throw new InvalidOperationException("type is not a function pointer");
     public virtual List<TypeInfo> FunctionParameterTypes => throw new InvalidOperationException("type is not a function pointer and does not contain parameters");
     public virtual CallingConvention CallingConvention => throw new InvalidOperationException($"unable to determine calling convention of {IntrinsicType}");
@@ -74,4 +79,31 @@ public class TypeInfo
         return $"{IntrinsicType}";
     }
 
+    public virtual bool TryExtractGenericArgumentTypes(Dictionary<TypeSymbol, TypeInfo> genericParameterToArgumentTypeMap, TypeSymbol parameterType)
+    {
+        // Note parameter type is the actual function parameter type, not the type parameter type
+        if (parameterType.IsGenericTypeSymbol)
+        {
+            if (genericParameterToArgumentTypeMap.TryGetValue(parameterType, out var resolvedTypeArgument))
+            {
+                if (!resolvedTypeArgument.Equals(this)) return false;
+                return true;
+            }
+            genericParameterToArgumentTypeMap[parameterType] = this;
+            return true;
+        }
+        if (parameterType.TypeName.Lexeme != IntrinsicType.ToString()) return false;
+        if (GenericTypeArgument != null)
+        {
+            if (parameterType.TypeArguments.Count == 1) return GenericTypeArgument.TryExtractGenericArgumentTypes(genericParameterToArgumentTypeMap, parameterType.TypeArguments[0]);
+            return false;
+        }
+        return parameterType.TypeArguments.Count == 0;
+    }
+
+    public virtual TypeSymbol ToTypeSymbol()
+    {
+        return new TypeSymbol(CreateToken(IntrinsicType.ToString()), GenericTypeArgument == null ? [] : [GenericTypeArgument.ToTypeSymbol()]);
+    }
+    protected static IToken CreateToken(string lexeme) => new Token(BuiltinTokenTypes.Word, lexeme, -1, -1);
 }

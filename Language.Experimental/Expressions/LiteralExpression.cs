@@ -1,4 +1,5 @@
 ﻿using Language.Experimental.Compiler.TypeResolver;
+using Language.Experimental.Parser;
 using Language.Experimental.TypedExpressions;
 using TokenizerCore.Interfaces;
 
@@ -16,5 +17,10 @@ public class LiteralExpression : ExpressionBase
     public override TypedExpression Resolve(TypeResolver typeResolver)
     {
         return typeResolver.Resolve(this);
+    }
+
+    public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
+    {
+        return new LiteralExpression(Token, Value);
     }
 }

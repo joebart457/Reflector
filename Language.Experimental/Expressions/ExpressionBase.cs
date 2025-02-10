@@ -1,5 +1,5 @@
-﻿using Language.Experimental.Compiler;
-using Language.Experimental.Compiler.TypeResolver;
+﻿using Language.Experimental.Compiler.TypeResolver;
+using Language.Experimental.Parser;
 using Language.Experimental.TypedExpressions;
 using TokenizerCore.Interfaces;
 
@@ -15,4 +15,6 @@ public abstract class ExpressionBase
     }
 
     public abstract TypedExpression Resolve(TypeResolver typeResolver);
+    public abstract ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap);
+
 }

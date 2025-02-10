@@ -1,5 +1,5 @@
 ﻿using Language.Experimental.Constants;
-using Language.Experimental.Models;
+using Language.Experimental.Parser;
 using TokenizerCore.Interfaces;
 
 namespace Language.Experimental.Statements;
@@ -7,10 +7,10 @@ namespace Language.Experimental.Statements;
 public class Parameter
 {
     public IToken Name { get; set; }
-    public TypeInfo TypeInfo { get; set; }
-    public Parameter(IToken name, TypeInfo typeInfo)
+    public TypeSymbol TypeSymbol { get; set; }
+    public Parameter(IToken name, TypeSymbol typeSymbol)
     {
         Name = name;
-        TypeInfo = typeInfo;
+        TypeSymbol = typeSymbol;
     }
 }

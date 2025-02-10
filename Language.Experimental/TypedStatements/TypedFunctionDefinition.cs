@@ -15,13 +15,13 @@ public class TypedFunctionDefinition: TypedStatement
 {
     public IToken FunctionName { get; set; }
     public TypeInfo ReturnType { get; set; }
-    public List<Parameter> Parameters { get; set; }
+    public List<TypedParameter> Parameters { get; set; }
     public List<TypedExpression> BodyStatements { get; set; }
     public CallingConvention CallingConvention { get; set; }
     public bool IsExported { get; set; }
     public IToken ExportedSymbol { get; set; }
 
-    public TypedFunctionDefinition(IToken functionName, TypeInfo returnType, List<Parameter> parameters, List<TypedExpression> bodyStatements)
+    public TypedFunctionDefinition(IToken functionName, TypeInfo returnType, List<TypedParameter> parameters, List<TypedExpression> bodyStatements)
     {
         FunctionName = functionName;
         ReturnType = returnType;
@@ -33,7 +33,7 @@ public class TypedFunctionDefinition: TypedStatement
     }
 
 
-    public TypedFunctionDefinition(IToken functionName, TypeInfo returnType, List<Parameter> parameters, List<TypedExpression> bodyStatements, CallingConvention callingConvention, bool isExported, IToken exportedSymbol)
+    public TypedFunctionDefinition(IToken functionName, TypeInfo returnType, List<TypedParameter> parameters, List<TypedExpression> bodyStatements, CallingConvention callingConvention, bool isExported, IToken exportedSymbol)
     {
         FunctionName = functionName;
         ReturnType = returnType;

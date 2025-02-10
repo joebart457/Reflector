@@ -1,5 +1,8 @@
-﻿
+﻿using Language.Experimental.Constants;
+using Language.Experimental.Models;
 using TokenizerCore.Interfaces;
+using TokenizerCore.Model;
+using TokenizerCore.Models.Constants;
 
 namespace Language.Experimental.Parser;
 
@@ -14,7 +17,7 @@ public class TypeSymbol
     }
 
     public virtual bool IsGenericTypeSymbol => false;
-    public virtual bool ContainsGenericTypeSymbol => TypeArguments.Any(x => x.ContainsGenericTypeSymbol);
+    public virtual bool ContainsGenericTypeSymbol => TypeArguments.Any(x => x.ContainsGenericTypeSymbol || x.IsGenericTypeSymbol);
 
     public override int GetHashCode()
     {
@@ -57,4 +60,8 @@ public class TypeSymbol
             return $"{TypeName.Lexeme}[{string.Join(", ", TypeArguments.Select(x => x.GetFlattenedName()))}]";
         return $"{TypeName.Lexeme}";
     }
+
+    public static TypeSymbol Void => new TypeSymbol(new Token(BuiltinTokenTypes.Word, IntrinsicType.Void.ToString(), -1, -1), new());
+    public static TypeSymbol Unkown => new TypeSymbol(new Token(BuiltinTokenTypes.Word, "?", -1, -1), new());
+
 }

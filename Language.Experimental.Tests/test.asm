@@ -1,16 +1,18 @@
 format PE console
 entry Main
 section '.data' data readable writeable
-	!str_0 db 0x74,0x65,0x73,0x74,0 ; "test"
-	!str_1 db 0x48,0x65,0x6C,0x6C,0x6F,0x20,0x77,0x6F,0x72,0x6C,0x64,0x21,0 ; "Hello world!"
+	!str_0 db 0x48,0x65,0x6C,0x6C,0x6F,0x2C,0x20,0x77,0x6F,0x72,0x6C,0x64,0x21,0 ; "Hello, world!"
 section '.text' code readable executable
 		Main:
 			_Main@0:
 			push ebp
 			mov ebp, esp
 			sub esp, 4
-			push dword [printf]
-			call doCallThenPrint!Cdecl_Function_Ptr?String_Void?
+			call GetString_Getter
+			push eax
+			push printerFactory!String
+			pop eax
+			call eax
 			mov esp, ebp
 			pop ebp
 			ret
@@ -24,17 +26,34 @@ section '.text' code readable executable
 			mov esp, ebp
 			pop ebp
 			ret
-		doCallThenPrint!Cdecl_Function_Ptr?String_Void?:
-			_doCallThenPrint!Cdecl_Function_Ptr?String_Void?@4:
+		GetString_Getter:
+			_GetString_Getter@0:
+			push ebp
+			mov ebp, esp
+			sub esp, 4
+			push GetString
+			pop eax
+			mov esp, ebp
+			pop ebp
+			ret
+		GetString:
+			_GetString@0:
 			push ebp
 			mov ebp, esp
 			sub esp, 4
 			push !str_0
+			pop eax
+			mov esp, ebp
+			pop ebp
+			ret
+		printerFactory!String:
+			_printerFactory!String@4:
+			push ebp
+			mov ebp, esp
+			sub esp, 4
 			call dword [ebp + 8]
-			add esp, 4
-			push !str_1
-			call indirect_print
-			call eax
+			push eax
+			call dword [printf]
 			add esp, 4
 			mov esp, ebp
 			pop ebp

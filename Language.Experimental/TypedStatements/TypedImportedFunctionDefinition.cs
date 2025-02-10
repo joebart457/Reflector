@@ -11,11 +11,11 @@ public class TypedImportedFunctionDefinition: TypedStatement
 {
     public IToken FunctionName { get; set; }
     public TypeInfo ReturnType { get; set; }
-    public List<Parameter> Parameters { get; set; }
+    public List<TypedParameter> Parameters { get; set; }
     public CallingConvention CallingConvention { get; set; }
     public IToken LibraryAlias { get; set; }
     public IToken FunctionSymbol { get; set; }
-    public TypedImportedFunctionDefinition(IToken functionName, TypeInfo returnType, List<Parameter> parameters, CallingConvention callingConvention, IToken libraryAlias, IToken functionSymbol)
+    public TypedImportedFunctionDefinition(IToken functionName, TypeInfo returnType, List<TypedParameter> parameters, CallingConvention callingConvention, IToken libraryAlias, IToken functionSymbol)
     {
         FunctionName = functionName;
         ReturnType = returnType;

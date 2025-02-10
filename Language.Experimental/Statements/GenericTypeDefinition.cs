@@ -1,13 +1,13 @@
-﻿
+﻿using Language.Experimental.Compiler.TypeResolver;
 using Language.Experimental.Parser;
-using Language.Experimental.Statements;
+using Language.Experimental.TypedStatements;
 using ParserLite.Exceptions;
 using TokenizerCore.Interfaces;
 using TokenizerCore.Model;
 
-namespace Language.Experimental.UnresolvedStatements;
+namespace Language.Experimental.Statements;
 
-public class GenericTypeDefinition : UnresolvedStatementBase
+public class GenericTypeDefinition : StatementBase
 {
     public IToken TypeName { get; set; }
     public List<GenericTypeSymbol> GenericTypeParameters { get; set; }
@@ -19,17 +19,12 @@ public class GenericTypeDefinition : UnresolvedStatementBase
         Fields = fields;
     }
 
-    public override StatementBase Resolve(TypeSymbolResolver typeSymbolResolver)
-    {
-        throw new InvalidOperationException();
-    }
-
     public TypeDefinition ToConcreteTypeDefinition(List<TypeSymbol> typeArguments)
     {
         var unresolvedTypeParameter = typeArguments.Find(x => x.IsGenericTypeSymbol || x.ContainsGenericTypeSymbol);
         if (unresolvedTypeParameter != null)
             throw new ParsingException(TypeName, $"invalid generic type arguments: unresolved generic type parameter {unresolvedTypeParameter}");
-        if (typeArguments.Count != GenericTypeParameters.Count) 
+        if (typeArguments.Count != GenericTypeParameters.Count)
             throw new ParsingException(TypeName, $"expected {GenericTypeParameters.Count} type arguments but got {typeArguments.Count}");
 
         var genericToConcreteTypeMap = new Dictionary<GenericTypeSymbol, TypeSymbol>();
@@ -41,7 +36,7 @@ public class GenericTypeDefinition : UnresolvedStatementBase
         }
 
         var newFields = Fields.Select(x => new TypeDefinitionField(x.TypeSymbol, x.Name)).ToList();
-        foreach(var field in newFields)
+        foreach (var field in newFields)
         {
             field.TypeSymbol = field.TypeSymbol.ReplaceGenericTypeParameter(genericToConcreteTypeMap);
         }
@@ -57,5 +52,13 @@ public class GenericTypeDefinition : UnresolvedStatementBase
         return new TypeDefinition(instantiatedTypeNameToken, newFields);
     }
 
+    public override void GatherSignature(TypeResolver typeResolver)
+    {
+        typeResolver.GatherSignature(this);
+    }
 
+    public override TypedStatement Resolve(TypeResolver typeResolver)
+    {
+        throw new NotImplementedException();
+    }
 }

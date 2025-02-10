@@ -9,7 +9,7 @@
 
 
 (defn Main:void (params)
-	(doCallThenPrint[cfn_ptr[string, void]] printf)
+	(printerFactory[string] (GetString_Getter))
 	(return)
 )
 
@@ -18,8 +18,21 @@
 )
 
 
-(defn doCallThenPrint[gen T]:void (params (param func T))
-	(func 'test')
-	((indirect_print) 'Hello world!')
+
+(defn printerFactory[gen T]:void (params (param fn fn_ptr[T]))
+	(printf (fn))
 	(return)
+)
+
+
+
+(defn GetString_Getter:fn_ptr[string] (params)
+	(return GetString)
+)
+
+
+(defn GetString:string (params)
+
+	(return "Hello, world!")
+
 )

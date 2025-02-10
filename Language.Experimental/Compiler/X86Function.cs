@@ -16,7 +16,7 @@ public class X86Function
     public List<TypedLocalVariableExpression> LocalVariables{ get; set; }
     public List<X86Instruction> Instructions { get; set; } = new();
     public CallingConvention CallingConvention => OriginalDeclaration.CallingConvention;
-    public List<Parameter> Parameters => OriginalDeclaration.Parameters;
+    public List<TypedParameter> Parameters => OriginalDeclaration.Parameters;
     public bool IsExported => OriginalDeclaration.IsExported;
     public IToken ExportedSymbol => OriginalDeclaration.ExportedSymbol;
     public X86Function(TypedFunctionDefinition originalDeclaration)
