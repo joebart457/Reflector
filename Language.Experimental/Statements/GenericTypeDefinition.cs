@@ -47,7 +47,7 @@ public class GenericTypeDefinition : StatementBase
             throw new ParsingException(TypeName, $"invalid generic type arguments: unresolved generic type parameter {unresolvedTypeParameter}");
 
         var instantiatedTypeName = $"{TypeName.Lexeme}!{string.Join('_', typeArguments.Select(x => x.GetFlattenedName()))}";
-        var instantiatedTypeNameToken = new Token(TypeName.Type, instantiatedTypeName, TypeName.Location.Line, TypeName.Location.Column);
+        var instantiatedTypeNameToken = new Token(TypeName.Type, instantiatedTypeName, TypeName.Start, TypeName.End);
 
         return new TypeDefinition(instantiatedTypeNameToken, newFields);
     }

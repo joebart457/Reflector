@@ -61,7 +61,4 @@ public class TypeSymbol
         return $"{TypeName.Lexeme}";
     }
 
-    public static TypeSymbol Void => new TypeSymbol(new Token(BuiltinTokenTypes.Word, IntrinsicType.Void.ToString(), -1, -1), new());
-    public static TypeSymbol Unkown => new TypeSymbol(new Token(BuiltinTokenTypes.Word, "?", -1, -1), new());
-
 }

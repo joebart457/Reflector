@@ -9,7 +9,7 @@
 
 
 (defn Main:void (params)
-	(printerFactory[string] (GetString_Getter))
+	(printerFactory[] (GetString_Getter))
 	(return)
 )
 

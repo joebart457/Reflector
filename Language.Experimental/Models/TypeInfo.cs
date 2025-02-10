@@ -105,5 +105,5 @@ public class TypeInfo
     {
         return new TypeSymbol(CreateToken(IntrinsicType.ToString()), GenericTypeArgument == null ? [] : [GenericTypeArgument.ToTypeSymbol()]);
     }
-    protected static IToken CreateToken(string lexeme) => new Token(BuiltinTokenTypes.Word, lexeme, -1, -1);
+    protected static IToken CreateToken(string lexeme) => new Token(BuiltinTokenTypes.Word, lexeme, Location.Zero, Location.Zero);
 }

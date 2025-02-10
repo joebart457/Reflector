@@ -489,7 +489,7 @@ public class TypeResolver
     internal TypedExpression Resolve(LambdaExpression lambdaExpression)
     {
         // For lambdas we will simply pull out the function definition and return a reference to the function as an (unique, generated) identifier
-        var anonymousToken = GetAnonymousFunctionLabel(lambdaExpression.FunctionDefinition.Token.Location.Line, lambdaExpression.FunctionDefinition.Token.Location.Column);
+        var anonymousToken = GetAnonymousFunctionLabel(lambdaExpression.FunctionDefinition.Token);
         lambdaExpression.FunctionDefinition.FunctionName = anonymousToken;
         GatherSignature(lambdaExpression.FunctionDefinition);
         var flattenedLambda = (TypedFunctionDefinition)Resolve(lambdaExpression.FunctionDefinition);
@@ -497,7 +497,7 @@ public class TypeResolver
         return Resolve(new IdentifierExpression(anonymousToken));
     }
 
-    private IToken GetAnonymousFunctionLabel(int row, int column) => new Token(BuiltinTokenTypes.Word, $"_anonymous__!{AnonymousFunctionIndex++}", row, column);
+    private IToken GetAnonymousFunctionLabel(IToken token) => new Token(BuiltinTokenTypes.Word, $"_anonymous__!{AnonymousFunctionIndex++}", token.Start, token.End);
 
     private int AnonymousFunctionIndex = 0;
 }

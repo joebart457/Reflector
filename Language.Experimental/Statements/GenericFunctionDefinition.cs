@@ -65,7 +65,7 @@ public class GenericFunctionDefinition : StatementBase
         var newBodyStatements = BodyStatements.Select(x => x.ReplaceGenericTypeSymbols(genericToConcreteTypeMap)).ToList();
 
         var instantiatedFunctionName = $"{FunctionName.Lexeme}!{string.Join('_', typeArguments.Select(x => x.GetFlattenedName()))}";
-        var instantiatedFunctionNameToken = new Token(FunctionName.Type, instantiatedFunctionName, FunctionName.Location.Line, FunctionName.Location.Column);
+        var instantiatedFunctionNameToken = new Token(FunctionName.Type, instantiatedFunctionName, FunctionName.Start, FunctionName.End);
 
         var returnType = ReturnType.ReplaceGenericTypeParameter(genericToConcreteTypeMap);
 
