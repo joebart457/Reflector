@@ -1,38 +1,38 @@
 
 (library msvcrt `msvcrt.dll`)
 
-(import msvcrt cdecl printf:void (params (param msg string)))
+(import msvcrt cdecl printf:void (param msg string))
 
 (type myType
 	(field msg string)
 )
 
 
-(defn Main:void (params)
+(defn Main:void
 	(printerFactory[] (GetString_Getter))
 	(return)
 )
 
-(defn indirect_print:cfn_ptr[string, void] (params)
+(defn indirect_print:cfunc[string, void]
 	(return printf)
 )
 
 
 
-(defn printerFactory[gen T]:void (params (param fn fn_ptr[T]))
+(defn printerFactory[gen T]:void (param fn func[T])
 	(printf (fn))
 	(return)
 )
 
 
 
-(defn GetString_Getter:fn_ptr[string] (params)
+(defn GetString_Getter:func[string]
 	(return GetString)
 )
 
 
-(defn GetString:string (params)
+(defn GetString:string
 
-	(return "Hello, world!")
+	(return "Hello, new world!")
 
 )

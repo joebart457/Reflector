@@ -1,7 +1,7 @@
 format PE console
 entry Main
 section '.data' data readable writeable
-	!str_0 db 0x48,0x65,0x6C,0x6C,0x6F,0x2C,0x20,0x77,0x6F,0x72,0x6C,0x64,0x21,0 ; "Hello, world!"
+	!str_0 db 0x48,0x65,0x6C,0x6C,0x6F,0x2C,0x20,0x6E,0x65,0x77,0x20,0x77,0x6F,0x72,0x6C,0x64,0x21,0 ; "Hello, new world!"
 section '.text' code readable executable
 		Main:
 			_Main@0:
@@ -10,9 +10,7 @@ section '.text' code readable executable
 			sub esp, 4
 			call GetString_Getter
 			push eax
-			push printerFactory!String
-			pop eax
-			call eax
+			call printerFactory!string
 			mov esp, ebp
 			pop ebp
 			ret
@@ -46,8 +44,8 @@ section '.text' code readable executable
 			mov esp, ebp
 			pop ebp
 			ret
-		printerFactory!String:
-			_printerFactory!String@4:
+		printerFactory!string:
+			_printerFactory!string@4:
 			push ebp
 			mov ebp, esp
 			sub esp, 4

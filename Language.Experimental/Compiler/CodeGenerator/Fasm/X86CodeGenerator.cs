@@ -17,12 +17,16 @@ public static class X86CodeGenerator
         if (data.CompilationOptions.OutputTarget == OutputTarget.Exe)
         {
             sb.AppendLine("format PE console");
-            sb.AppendLine("entry Main");
+            if (!string.IsNullOrWhiteSpace(data.CompilationOptions.EntryPoint))
+                sb.AppendLine($"entry {data.CompilationOptions.EntryPoint}");
+            else sb.AppendLine("entry Main");
         }
         else if (data.CompilationOptions.OutputTarget == OutputTarget.Dll)
         {
             sb.AppendLine("format PE DLL");
-            sb.AppendLine("entry DllEntryPoint");
+            if (!string.IsNullOrWhiteSpace(data.CompilationOptions.EntryPoint))
+                sb.AppendLine($"entry {data.CompilationOptions.EntryPoint}");
+            else sb.AppendLine("entry DllEntryPoint");
         }
         else throw new Exception($"unable to generate code for output target {data.CompilationOptions.OutputTarget}");
 

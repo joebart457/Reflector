@@ -25,21 +25,10 @@ public class FunctionPtrTypeInfo: TypeInfo
         }
     }
 
-    public FunctionPtrTypeInfo(IntrinsicType intrinsicType, TypeInfo returnType, List<TypeInfo> parameterTypes) : base(intrinsicType, null)
-    {
-        ValidateIntrinsicType();
-        ReturnType = returnType;
-        ParameterTypes = parameterTypes;
-    }
-
     private void ValidateIntrinsicType()
     {
-        var isValid = IntrinsicType == IntrinsicType.StdCall_Function_Ptr
-            || IntrinsicType == IntrinsicType.StdCall_Function_Ptr_Internal
-            || IntrinsicType == IntrinsicType.StdCall_Function_Ptr_External
-            || IntrinsicType == IntrinsicType.Cdecl_Function_Ptr
-            || IntrinsicType == IntrinsicType.Cdecl_Function_Ptr_Internal
-            || IntrinsicType == IntrinsicType.Cdecl_Function_Ptr_External;
+        var isValid = IntrinsicType == IntrinsicType.Func
+            || IntrinsicType == IntrinsicType.CFunc;
         if (!isValid) throw new InvalidOperationException($"cannot initialize FunctionPtrTypeInfo with type {IntrinsicType}");
     }
     public List<TypeInfo> GetAllTypeArguments()
@@ -51,26 +40,8 @@ public class FunctionPtrTypeInfo: TypeInfo
     public override TypeInfo FunctionReturnType => ReturnType;
     public override List<TypeInfo> FunctionParameterTypes => ParameterTypes;
     public override bool IsFunctionPtr => true;
-
-    public override bool IsInternalFnPtr => IntrinsicType == IntrinsicType.StdCall_Function_Ptr_Internal
-                                    || IntrinsicType == IntrinsicType.StdCall_Function_Ptr_Internal
-                                    || IntrinsicType == IntrinsicType.Cdecl_Function_Ptr_Internal;
-    public override bool IsExternalFnPtr => IntrinsicType == IntrinsicType.StdCall_Function_Ptr_External
-                                    || IntrinsicType == IntrinsicType.StdCall_Function_Ptr_External
-                                    || IntrinsicType == IntrinsicType.Cdecl_Function_Ptr_External;
-
-    public override CallingConvention CallingConvention => _stdcallTypes.Contains(IntrinsicType) ? CallingConvention.StdCall :
-                                                   (_cdeclTypes.Contains(IntrinsicType) ? CallingConvention.Cdecl : throw new InvalidOperationException($"unable to determine calling convention of {IntrinsicType}"));
-
-    private static List<IntrinsicType> _stdcallTypes => [IntrinsicType.StdCall_Function_Ptr, IntrinsicType.StdCall_Function_Ptr_External, IntrinsicType.StdCall_Function_Ptr_Internal];
-    private static List<IntrinsicType> _cdeclTypes => [IntrinsicType.Cdecl_Function_Ptr, IntrinsicType.Cdecl_Function_Ptr_External, IntrinsicType.Cdecl_Function_Ptr_Internal];
-
-    public FunctionPtrTypeInfo AsReference()
-    {
-        if (_stdcallTypes.Contains(IntrinsicType)) return new FunctionPtrTypeInfo(IntrinsicType.StdCall_Function_Ptr, ReturnType, ParameterTypes);
-        return new FunctionPtrTypeInfo(IntrinsicType.Cdecl_Function_Ptr, ReturnType, ParameterTypes);
-    }
-
+    public override CallingConvention CallingConvention => IntrinsicType == IntrinsicType.Func ? CallingConvention.StdCall : CallingConvention.Cdecl;
+                                                  
     public override int GetHashCode()
     {
         return IntrinsicType.GetHashCode();
@@ -113,7 +84,7 @@ public class FunctionPtrTypeInfo: TypeInfo
             genericParameterToArgumentTypeMap[parameterType] = this;
             return true;
         }
-        if (parameterType.TypeName.Lexeme != IntrinsicType.ToString()) return false;
+        if (parameterType.TypeName.Lexeme != IntrinsicType.ToString().ToLower()) return false;
         var allTypeArguments = GetAllTypeArguments();
         if (allTypeArguments.Count != parameterType.TypeArguments.Count) return false;
         for (int i = 0; i < allTypeArguments.Count; i++)
@@ -125,6 +96,6 @@ public class FunctionPtrTypeInfo: TypeInfo
 
     public override TypeSymbol ToTypeSymbol()
     {
-        return new TypeSymbol(CreateToken(IntrinsicType.ToString()), GetAllTypeArguments().Select(x => x.ToTypeSymbol()).ToList());
+        return new TypeSymbol(CreateToken(IntrinsicType.ToString().ToLower()), GetAllTypeArguments().Select(x => x.ToTypeSymbol()).ToList());
     }
 }

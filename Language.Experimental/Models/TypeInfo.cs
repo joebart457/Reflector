@@ -22,12 +22,8 @@ public class TypeInfo
 
     private void ValidateIntrinsicType()
     {
-        var isInvalid = IntrinsicType == IntrinsicType.StdCall_Function_Ptr
-            || IntrinsicType == IntrinsicType.StdCall_Function_Ptr_Internal
-            || IntrinsicType == IntrinsicType.StdCall_Function_Ptr_External
-            || IntrinsicType == IntrinsicType.Cdecl_Function_Ptr
-            || IntrinsicType == IntrinsicType.Cdecl_Function_Ptr_Internal
-            || IntrinsicType == IntrinsicType.Cdecl_Function_Ptr_External
+        var isInvalid = IntrinsicType == IntrinsicType.Func
+            || IntrinsicType == IntrinsicType.CFunc
             || IntrinsicType == IntrinsicType.Struct;
         if (isInvalid) throw new InvalidOperationException($"cannot initialize TypeInfo with type {IntrinsicType}");
         if (IntrinsicType == IntrinsicType.Ptr && GenericTypeArgument == null) throw new InvalidOperationException($"type {IntrinsicType} requires one type argument");
@@ -92,7 +88,7 @@ public class TypeInfo
             genericParameterToArgumentTypeMap[parameterType] = this;
             return true;
         }
-        if (parameterType.TypeName.Lexeme != IntrinsicType.ToString()) return false;
+        if (parameterType.TypeName.Lexeme != IntrinsicType.ToString().ToLower()) return false;
         if (GenericTypeArgument != null)
         {
             if (parameterType.TypeArguments.Count == 1) return GenericTypeArgument.TryExtractGenericArgumentTypes(genericParameterToArgumentTypeMap, parameterType.TypeArguments[0]);
@@ -103,7 +99,7 @@ public class TypeInfo
 
     public virtual TypeSymbol ToTypeSymbol()
     {
-        return new TypeSymbol(CreateToken(IntrinsicType.ToString()), GenericTypeArgument == null ? [] : [GenericTypeArgument.ToTypeSymbol()]);
+        return new TypeSymbol(CreateToken(IntrinsicType.ToString().ToLower()), GenericTypeArgument == null ? [] : [GenericTypeArgument.ToTypeSymbol()]);
     }
-    protected static IToken CreateToken(string lexeme) => new Token(BuiltinTokenTypes.Word, lexeme, Location.Zero, Location.Zero);
+    protected static IToken CreateToken(string lexeme) => new Token(TokenTypes.IntrinsicType, lexeme, Location.Zero, Location.Zero);
 }

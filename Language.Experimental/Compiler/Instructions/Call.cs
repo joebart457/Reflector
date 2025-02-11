@@ -31,4 +31,18 @@ namespace Language.Experimental.Compiler.Instructions
             return $"call {Callee}";
         }
     }
+
+    public class Call_Register : X86Instruction
+    {
+        public X86Register Callee { get; set; }
+        public Call_Register(X86Register callee)
+        {
+            Callee = callee;
+        }
+
+        public override string Emit()
+        {
+            return $"call {Callee}";
+        }
+    }
 }

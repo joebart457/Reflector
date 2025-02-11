@@ -3,7 +3,6 @@ using Language.Experimental.Compiler.Instructions;
 using Language.Experimental.Constants;
 using Language.Experimental.Expressions;
 using Language.Experimental.Models;
-using Language.Experimental.Statements;
 using Language.Experimental.TypedExpressions;
 using System.Runtime.InteropServices;
 using TokenizerCore.Interfaces;
@@ -11,7 +10,7 @@ using TokenizerCore.Interfaces;
 namespace Language.Experimental.TypedStatements;
 
 
-public class TypedFunctionDefinition: TypedStatement
+public class TypedFunctionDefinition: TypedStatement, ITypedFunctionInfo
 {
     public IToken FunctionName { get; set; }
     public TypeInfo ReturnType { get; set; }
@@ -20,6 +19,8 @@ public class TypedFunctionDefinition: TypedStatement
     public CallingConvention CallingConvention { get; set; }
     public bool IsExported { get; set; }
     public IToken ExportedSymbol { get; set; }
+    public bool IsImported => false;
+    public IToken FunctionSymbol => ExportedSymbol;
 
     public TypedFunctionDefinition(IToken functionName, TypeInfo returnType, List<TypedParameter> parameters, List<TypedExpression> bodyStatements)
     {
@@ -43,7 +44,6 @@ public class TypedFunctionDefinition: TypedStatement
         IsExported = isExported;
         ExportedSymbol = exportedSymbol;
     }
-
 
 
     public IEnumerable<TypedLocalVariableExpression> ExtractLocalVariableExpressions()
@@ -74,6 +74,7 @@ public class TypedFunctionDefinition: TypedStatement
         { 
             if (tre.ReturnValue != null) ls.AddRange(ExtractLocalVariableExpressionsHelper(tre.ReturnValue)); 
         }
+        else if (expression is TypedDirectCallExpression tdce) foreach (var arg in tdce.Arguments) ls.AddRange(ExtractLocalVariableExpressionsHelper(arg));
         else throw new InvalidOperationException($"unsupported expression type {expression.GetType().Name}");
         return ls;
     }
@@ -105,8 +106,8 @@ public class TypedFunctionDefinition: TypedStatement
 
     public FunctionPtrTypeInfo GetFunctionPointerType()
     {
-        var intrinsicType = IntrinsicType.StdCall_Function_Ptr_Internal;
-        if (CallingConvention == CallingConvention.Cdecl) intrinsicType = IntrinsicType.Cdecl_Function_Ptr_Internal;
+        var intrinsicType = IntrinsicType.Func;
+        if (CallingConvention == CallingConvention.Cdecl) intrinsicType = IntrinsicType.CFunc;
         var typeArguments = Parameters.Select(x => x.TypeInfo).ToList();
         typeArguments.Add(ReturnType);
         return new FunctionPtrTypeInfo(intrinsicType, typeArguments);

@@ -434,6 +434,26 @@ internal class X86AssemblyOptimizer
             WipeRegister(XmmRegister.xmm1);
             _fpuStack.Clear();
         }
+        if (instruction is Call_RegisterOffset call_RegisterOffset)
+        {
+            WipeRegister(X86Register.eax);
+            WipeRegister(X86Register.ebx);
+            WipeRegister(X86Register.ecx);
+            WipeRegister(X86Register.edx);
+            WipeRegister(XmmRegister.xmm0);
+            WipeRegister(XmmRegister.xmm1);
+            _fpuStack.Clear();
+        }
+        if (instruction is Call_Register call_Register)
+        {
+            WipeRegister(X86Register.eax);
+            WipeRegister(X86Register.ebx);
+            WipeRegister(X86Register.ecx);
+            WipeRegister(X86Register.edx);
+            WipeRegister(XmmRegister.xmm0);
+            WipeRegister(XmmRegister.xmm1);
+            _fpuStack.Clear();
+        }
         if (instruction is Label label)
         {
             _memoryMap.Clear();
@@ -847,7 +867,7 @@ internal class X86AssemblyOptimizer
                     {
                         var nextInstruction = Peek(fn.Instructions, i + 1);
                         if (nextInstruction != null
-                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp)
+                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp || nextInstruction is Call_Register || nextInstruction is Call_RegisterOffset)
                             && !IsEspReferenced([nextInstruction], 0))
                         {
                             optimizedInstructions.Add(TrackInstruction(nextInstruction));
@@ -859,7 +879,7 @@ internal class X86AssemblyOptimizer
                     {
                         var nextInstruction = Peek(fn.Instructions, i + 1);
                         if (nextInstruction != null
-                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp)
+                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp || nextInstruction is Call_Register || nextInstruction is Call_RegisterOffset)
                             && !IsEspReferenced([nextInstruction], 0)
                             && !IsReferenced([nextInstruction], 0, push_Register.Register))
                         {
@@ -917,7 +937,7 @@ internal class X86AssemblyOptimizer
                     {
                         var nextInstruction = Peek(fn.Instructions, i + 1);
                         if (nextInstruction != null
-                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp)
+                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp || nextInstruction is Call_Register || nextInstruction is Call_RegisterOffset)
                             && !IsEspReferenced([nextInstruction], 0))
                         {
                             optimizedInstructions.Add(TrackInstruction(nextInstruction));
@@ -929,7 +949,7 @@ internal class X86AssemblyOptimizer
                     {
                         var nextInstruction = Peek(fn.Instructions, i + 1);
                         if (nextInstruction != null
-                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp)
+                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp || nextInstruction is Call_Register || nextInstruction is Call_RegisterOffset)
                             && !IsEspReferenced([nextInstruction], 0)
                             && !IsReferenced([nextInstruction], 0, push_Offset.Offset)
                             && !DoesRegisterLoseIntegrity(nextInstruction, push_Offset.Offset.Register))
@@ -967,7 +987,7 @@ internal class X86AssemblyOptimizer
                     {
                         var nextInstruction = Peek(fn.Instructions, i + 1);
                         if (nextInstruction != null
-                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp)
+                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp || nextInstruction is Call_Register || nextInstruction is Call_RegisterOffset)
                             && !IsReferenced([nextInstruction], 0, X86Register.esp))
                         {
                             optimizedInstructions.Add(TrackInstruction(nextInstruction));
@@ -1005,7 +1025,7 @@ internal class X86AssemblyOptimizer
                     {
                         var nextInstruction = Peek(fn.Instructions, i + 1);
                         if (nextInstruction != null
-                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp)
+                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp || nextInstruction is Call_Register || nextInstruction is Call_RegisterOffset)
                             && !IsEspReferenced([nextInstruction], 0))
                         {
                             optimizedInstructions.Add(TrackInstruction(nextInstruction));
@@ -1017,7 +1037,7 @@ internal class X86AssemblyOptimizer
                     {
                         var nextInstruction = Peek(fn.Instructions, i + 1);
                         if (nextInstruction != null
-                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp)
+                            && !(nextInstruction is Call || nextInstruction is Label || nextInstruction is Jmp || nextInstruction is Call_Register || nextInstruction is Call_RegisterOffset)
                             && !IsEspReferenced([nextInstruction], 0))
                         {
 
@@ -1862,6 +1882,10 @@ internal class X86AssemblyOptimizer
         {
 
         }
+        if (instruction is Call_RegisterOffset call_RegisterOffset)
+        {
+            if (call_RegisterOffset.Callee.Equals(offset)) return true;
+        }
         if (instruction is Call call)
         {
 
@@ -2283,6 +2307,22 @@ internal class X86AssemblyOptimizer
         {
             if (cmp_Byte_Byte.Operand1.ToFullRegister() == register || cmp_Byte_Byte.Operand2.ToFullRegister() == register) return true;
         }
+        else if (instruction is Call_RegisterOffset call_RegisterOffset)
+        {
+            if (register == call_RegisterOffset.Callee.Register) return true;
+            if (register == X86Register.eax) return false;
+            if (register == X86Register.ebx) return false;
+            if (register == X86Register.ecx) return false;
+            if (register == X86Register.edx) return false;
+        }
+        else if (instruction is Call_Register call_Register)
+        {
+            if (register == call_Register.Callee) return true;
+            if (register == X86Register.eax) return false;
+            if (register == X86Register.ebx) return false;
+            if (register == X86Register.ecx) return false;
+            if (register == X86Register.edx) return false;
+        }
         else if (instruction is Call call)
         {
             if (register == X86Register.eax) return false;
@@ -2512,6 +2552,16 @@ internal class X86AssemblyOptimizer
         }
         else if (instruction is Cmp_Byte_Byte cmp_Byte_Byte)
         {
+        }
+        else if (instruction is Call_RegisterOffset call_RegisterOffset)
+        {
+            if (register == XmmRegister.xmm0) return false;
+            if (register == XmmRegister.xmm1) return false;
+        }
+        else if (instruction is Call_Register call_Register)
+        {
+            if (register == XmmRegister.xmm0) return false;
+            if (register == XmmRegister.xmm1) return false;
         }
         else if (instruction is Call call)
         {
@@ -2744,6 +2794,20 @@ internal class X86AssemblyOptimizer
         }
         else if (instruction is Cmp_Byte_Byte cmp_Byte_Byte)
         {
+        }
+        else if (instruction is Call_RegisterOffset call_RegisterOffset)
+        {
+            if (register == X86Register.eax) return true;
+            if (register == X86Register.ebx) return true;
+            if (register == X86Register.ecx) return true;
+            if (register == X86Register.edx) return true;
+        }
+        else if (instruction is Call_Register call_Register)
+        {
+            if (register == X86Register.eax) return true;
+            if (register == X86Register.ebx) return true;
+            if (register == X86Register.ecx) return true;
+            if (register == X86Register.edx) return true;
         }
         else if (instruction is Call call)
         {

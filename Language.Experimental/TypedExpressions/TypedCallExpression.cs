@@ -30,19 +30,8 @@ public class TypedCallExpression : TypedExpression
 
         if (CallTarget is TypedIdentifierExpression idExpr)
         {
-            if (idExpr.TypeInfo.IsInternalFnPtr)
-            {
-                cc.AddInstruction(X86Instructions.Call(idExpr.Token.Lexeme, false));
-            }
-            else if (idExpr.TypeInfo.IsExternalFnPtr)
-            {
-                cc.AddInstruction(X86Instructions.Call(idExpr.Token.Lexeme, true));
-            }
-            else
-            {
-                var offset = cc.GetIdentifierOffset(idExpr.Token);
-                cc.AddInstruction(X86Instructions.Call(offset));
-            }
+            var offset = cc.GetIdentifierOffset(idExpr.Token);
+            cc.AddInstruction(X86Instructions.Call(offset));
         } else
         {
             CallTarget.Compile(cc);

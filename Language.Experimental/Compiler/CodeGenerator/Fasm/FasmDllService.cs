@@ -46,7 +46,7 @@ internal static class FasmDllService
         var result = fasm_Assemble(generatedAssembly, memoryBuffer, options.AssemblerOptions.MemorySize, options.AssemblerOptions.PassesLimit, IntPtr.Zero);
         if (result != FasmState.FASM_OK)
         {
-            if (result == FasmState.FASM_ERROR) return "FASM_ERROR";
+            if (result == FasmState.FASM_ERROR) return "FASM_ERROR: please double check program entry point and symbol names";
             if (result == FasmState.FASM_INVALID_PARAMETER) return "FASM_INVALID_PARAMETER";
             if (result == FasmState.FASM_OUT_OF_MEMORY) return "FASM_OUT_OF_MEMORY";
             if (result == FasmState.FASM_STACK_OVERFLOW) return "FASM_STACK_OVERFLOW";

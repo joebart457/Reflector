@@ -179,8 +179,12 @@ public class TypeResolver
     {
         if (typeSymbol.IsGenericTypeSymbol)
             throw new ParsingException(typeSymbol.TypeName, $"unable to resolve generic type parameter {typeSymbol} to a concrete type");
-        if (Enum.TryParse<IntrinsicType>(typeSymbol.TypeName.Lexeme, false, out var intrinsicType))
-            return ResolveIntrinsicType(intrinsicType, typeSymbol.TypeName, typeSymbol.TypeArguments);
+        if (typeSymbol.TypeName.Type == TokenTypes.IntrinsicType)
+        {
+            if (Enum.TryParse<IntrinsicType>(typeSymbol.TypeName.Lexeme, true, out var intrinsicType))
+                return ResolveIntrinsicType(intrinsicType, typeSymbol.TypeName, typeSymbol.TypeArguments);
+            else throw new ParsingException(typeSymbol.TypeName, $"invalid intrinsic type {typeSymbol}");
+        }      
         if (_resolvedTypes.TryGetValue(typeSymbol, out var typeInfo))
             return typeInfo;
         if (typeSymbol.TypeArguments.Any() && _genericTypeDefinitions.TryGetValue(typeSymbol.TypeName.Lexeme, out var genericTypeDefinition))
@@ -201,12 +205,8 @@ public class TypeResolver
             if (typeArguments.Count != 1) throw new ParsingException(typeName, "expect exactly one type argument");
             return TypeInfo.Pointer(Resolve(typeArguments[0]));
         }
-        else if (intrinsicType == IntrinsicType.StdCall_Function_Ptr
-            || intrinsicType == IntrinsicType.StdCall_Function_Ptr_Internal
-            || intrinsicType == IntrinsicType.StdCall_Function_Ptr_External
-            || intrinsicType == IntrinsicType.Cdecl_Function_Ptr
-            || intrinsicType == IntrinsicType.Cdecl_Function_Ptr_Internal
-            || intrinsicType == IntrinsicType.Cdecl_Function_Ptr_External)
+        else if (intrinsicType == IntrinsicType.Func
+            || intrinsicType == IntrinsicType.CFunc)
         {
             if (!typeArguments.Any()) throw new ParsingException(typeName, "expect at least one type argument");
             return new FunctionPtrTypeInfo(intrinsicType, typeArguments.Select(x => Resolve(x)).ToList());
@@ -266,14 +266,24 @@ public class TypeResolver
     internal TypedExpression Resolve(CallExpression callExpression)
     {
         var args = callExpression.Arguments.Select(x => x.Resolve(this)).ToList();
-        TypedExpression callTarget;  
-        if (callExpression.CallTarget is IdentifierExpression identifierExpression) 
-            callTarget = ResolveCallTarget(identifierExpression); 
-        else if(callExpression.CallTarget is GenericFunctionReferenceExpression genericFunctionReferenceExpression)
+        ITypedFunctionInfo? directCallTarget = null;
+        if (callExpression.CallTarget is IdentifierExpression identifierExpression)
+            directCallTarget = ResolveCallTarget(identifierExpression);
+        else if (callExpression.CallTarget is GenericFunctionReferenceExpression genericFunctionReferenceExpression)
+            directCallTarget = ResolveCallTarget(genericFunctionReferenceExpression, args);
+        if (directCallTarget != null)
         {
-            callTarget = ResolveCallTarget(genericFunctionReferenceExpression, args);
+            if (args.Count != directCallTarget.Parameters.Count)
+                throw new ParsingException(callExpression.Token, $"parity mismatch in call {directCallTarget.FunctionName.Lexeme}: expected {directCallTarget.Parameters.Count} arguments but got {args.Count}");
+            for (int i = 0; i < directCallTarget.Parameters.Count; i++)
+            {
+                if (!directCallTarget.Parameters[i].TypeInfo.Equals(args[i].TypeInfo))
+                    throw new ParsingException(callExpression.Token, $"call {directCallTarget.FunctionName.Lexeme}: expected argument to be of type {directCallTarget.Parameters[i].TypeInfo} but got {args[i].TypeInfo}");
+            }
+            return new TypedDirectCallExpression(directCallTarget.ReturnType, callExpression, directCallTarget, args);
         }
-        else callTarget = callExpression.CallTarget.Resolve(this);
+
+        TypedExpression callTarget = callExpression.CallTarget.Resolve(this);
 
         if (!callTarget.TypeInfo.IsFunctionPtr) throw new ParsingException(callExpression.Token, $"expect call target to be of type fn[...,t] but got {callTarget.TypeInfo}");
         
@@ -320,34 +330,28 @@ public class TypeResolver
         if (foundType == null && !_localVariableTypeMap.TryGetValue(identifierExpression.Token.Lexeme, out foundType))
         {
             if (_functionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var functionWithMatchingName))
-                return new TypedFunctionPointerExpression(functionWithMatchingName.GetFunctionPointerType().AsReference(), identifierExpression, functionWithMatchingName.FunctionName, false); // identifiers only reference the function address so they can be used as lambdas
+                return new TypedFunctionPointerExpression(functionWithMatchingName.GetFunctionPointerType(), identifierExpression, functionWithMatchingName.FunctionName, false); // identifiers only reference the function address so they can be used as lambdas
             if (_importedFunctionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var importedFunctionWithMatchingName))
-                return new TypedFunctionPointerExpression(importedFunctionWithMatchingName.GetFunctionPointerType().AsReference(), identifierExpression, importedFunctionWithMatchingName.FunctionName, true);
+                return new TypedFunctionPointerExpression(importedFunctionWithMatchingName.GetFunctionPointerType(), identifierExpression, importedFunctionWithMatchingName.FunctionName, true);
         }
         if (foundType == null)
             throw new ParsingException(identifierExpression.Token, $"unresolved symbol {identifierExpression.Token.Lexeme}");
         return new TypedIdentifierExpression(foundType, identifierExpression, identifierExpression.Token);
     }
 
-    internal TypedExpression ResolveCallTarget(IdentifierExpression identifierExpression)
+    internal ITypedFunctionInfo? ResolveCallTarget(IdentifierExpression identifierExpression)
     {
         // Identifiers that are direct call targets will be handled differently IE
         // (printf msg) 
-        // printf will be resolved to type Cdecl_FunctionPointer_External instead of Cdecl_FunctionPointer
-        var foundType = CurrentFunctionTarget.Parameters.Find(x => x.Name.Lexeme == identifierExpression.Token.Lexeme)?.TypeInfo;
-        if (foundType == null && !_localVariableTypeMap.TryGetValue(identifierExpression.Token.Lexeme, out foundType))
-        {
-            if (_functionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var functionWithMatchingName))
-                foundType = functionWithMatchingName.GetFunctionPointerType();
-            if (_importedFunctionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var importedFunctionWithMatchingName))
-                foundType = importedFunctionWithMatchingName.GetFunctionPointerType();
-        }
-        if (foundType == null)
-            throw new ParsingException(identifierExpression.Token, $"unresolved symbol {identifierExpression.Token.Lexeme}");
-        return new TypedIdentifierExpression(foundType, identifierExpression, identifierExpression.Token);
+
+        if (_functionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var functionWithMatchingName))
+            return functionWithMatchingName;
+        if (_importedFunctionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var importedFunctionWithMatchingName))
+            return importedFunctionWithMatchingName;
+        return null;
     }
 
-    internal TypedExpression ResolveCallTarget(GenericFunctionReferenceExpression genericFunctionReferenceExpression, List<TypedExpression> arguments)
+    internal ITypedFunctionInfo ResolveCallTarget(GenericFunctionReferenceExpression genericFunctionReferenceExpression, List<TypedExpression> arguments)
     {
         if (genericFunctionReferenceExpression.TypeArguments.Count == 0)
         {
@@ -376,9 +380,24 @@ public class TypeResolver
             }
             if (missingParameters.Any())
                 throw new ParsingException(genericFunctionReferenceExpression.Token, $"unable to resolve all parameters for call {genericFunction.FunctionName}. Missing parameters {string.Join(", ", missingParameters.Select(x => x.ToString()))}");
-            return Resolve(new GenericFunctionReferenceExpression(genericFunctionReferenceExpression.Token, resolvedGenericTypeArguments));
+            return ResolveCallTarget(new GenericFunctionReferenceExpression(genericFunctionReferenceExpression.Token, resolvedGenericTypeArguments));
         } 
-        else return Resolve(genericFunctionReferenceExpression);
+        else return ResolveCallTarget(genericFunctionReferenceExpression);
+    }
+
+    internal ITypedFunctionInfo ResolveCallTarget(GenericFunctionReferenceExpression genericFunctionReferenceExpression)
+    {
+        var symbol = $"{genericFunctionReferenceExpression.Identifier.Lexeme}!{string.Join('_', genericFunctionReferenceExpression.TypeArguments.Select(x => x.GetFlattenedName()))}";
+        if (_resolvedFunctionDefinitions.TryGetValue(symbol, out var resolvedFunctionDefinition)) return resolvedFunctionDefinition;
+        if (!_genericFunctionDefinitions.TryGetValue(genericFunctionReferenceExpression.Identifier.Lexeme, out var genericFunctionDefinition))
+            throw new ParsingException(genericFunctionReferenceExpression.Identifier, $"unresolved symbol to generic function definition {genericFunctionReferenceExpression.Identifier.Lexeme}");
+        var functionDefinition = genericFunctionDefinition.ToFunctionDefinition(genericFunctionReferenceExpression.TypeArguments);
+        GatherSignature(functionDefinition);
+        var previousFunctionTarget = CurrentFunctionTarget;
+        var typedFunctionDefinition = (TypedFunctionDefinition)Resolve(functionDefinition);
+        AddToResolvedGenericFunctions(typedFunctionDefinition);
+        _currentFunctionTarget = previousFunctionTarget;
+        return typedFunctionDefinition;
     }
 
     internal TypedExpression ResolveSetTarget(IdentifierExpression identifierExpression)

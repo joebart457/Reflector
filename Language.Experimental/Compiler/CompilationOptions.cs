@@ -15,7 +15,7 @@ public enum OutputTarget
 public class CompilationOptions
 {
     public string InputPath { get; set; } = "";
-    public string EntryPoint { get; set; } = "Start";
+    public string EntryPoint { get; set; } = "Main";
     public string AssemblyPath { get; set; } = "";
     public string OutputPath { get; set; } = "";
     public OutputTarget OutputTarget { get; set; } = OutputTarget.Exe;

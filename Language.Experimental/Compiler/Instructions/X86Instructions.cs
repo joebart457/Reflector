@@ -99,6 +99,7 @@ public static class X86Instructions
 
     public static Call Call(string callee, bool isIndirect) => new Call(callee, isIndirect);
     public static Call_RegisterOffset Call(RegisterOffset offset) => new Call_RegisterOffset(offset);
+    public static Call_Register Call(X86Register register) => new Call_Register(register);
     public static Label Label(string text) => new Label(text);
     public static Ret Ret() => new Ret();
     public static Ret_Immediate Ret(int immediate) => new Ret_Immediate(immediate);

@@ -399,6 +399,11 @@ public class ProgramParser : TokenParser
                                 var callee = p.ParseRegisterOffset();
                                 return X86Instructions.Call(callee);
                         }),
+                new(AssemblyInstruction.Call, [InstructionParseUnit.GeneralRegister32],
+                        (p) => {
+                                var callee = p.ParseGeneralRegister32();
+                                return X86Instructions.Call(callee);
+                        }),
                 new(AssemblyInstruction.Label, [InstructionParseUnit.Symbol],
                         (p) => {
                                 var text = p.ParseSymbol();
@@ -589,7 +594,9 @@ public class ProgramParser : TokenParser
 
     public TypeSymbol ParseTypeSymbol()
     {
-        var typeName = Consume(BuiltinTokenTypes.Word, "expect type annotation");
+        IToken typeName;
+        if (AdvanceIfMatch(TokenTypes.IntrinsicType)) typeName = Previous();
+        else typeName = Consume(BuiltinTokenTypes.Word, "expect type annotation");
         if (_validScopedGenericTypeParameters.TryGetValue(typeName.Lexeme, out var genericTypeSymbol)) return genericTypeSymbol;
         List<TypeSymbol> typeArguments = new();
         if (AdvanceIfMatch(TokenTypes.LBracket))
@@ -616,26 +623,6 @@ public class ProgramParser : TokenParser
         return genericTypeSymbol;
     }
 
-    private bool RequiresTypeArgument(IntrinsicType type)
-    {
-        return type == IntrinsicType.Ptr
-            || type == IntrinsicType.StdCall_Function_Ptr
-            || type == IntrinsicType.StdCall_Function_Ptr_Internal
-            || type == IntrinsicType.StdCall_Function_Ptr_External
-            || type == IntrinsicType.Cdecl_Function_Ptr
-            || type == IntrinsicType.Cdecl_Function_Ptr_Internal
-            || type == IntrinsicType.Cdecl_Function_Ptr_External;
-    }
-    private bool SupportsMultipleTypeArguments(IntrinsicType type)
-    {
-        return type == IntrinsicType.StdCall_Function_Ptr
-            || type == IntrinsicType.StdCall_Function_Ptr_Internal
-            || type == IntrinsicType.StdCall_Function_Ptr_External
-            || type == IntrinsicType.Cdecl_Function_Ptr
-            || type == IntrinsicType.Cdecl_Function_Ptr_Internal
-            || type == IntrinsicType.Cdecl_Function_Ptr_External;
-    }
-
     public StatementBase? ParseStatement()
     {
         if (AtEnd()) return null;
@@ -650,9 +637,13 @@ public class ProgramParser : TokenParser
     public StatementBase ParseFunctionDefinition(bool isLambda = false)
     {
         /*
-         * (defn main:int (params (param argc int) (param argv ptr[string]))
+         * (defn main:int (param argc int) (param argv ptr[string]
+         *  //...
+         * )
          * 
-         *  (defn add[gen T]:T (params (param x gen T) (param y gen T))
+         *  (defn add[gen T]:T (param x gen T) (param y gen T)
+         *  //...
+         *  )
          */
         IToken name;
         var genericTypeParameters = new List<GenericTypeSymbol>();
@@ -671,10 +662,8 @@ public class ProgramParser : TokenParser
         else name = Previous();
         Consume(TokenTypes.Colon, "expect functionName:returnType");
         var returnType = ParseTypeSymbol();
-        Consume(TokenTypes.LParen, "expect parameter list");
-        Consume(TokenTypes.Params, "expect paramter list. IE (params (param argc int) (param argv ptr<string>))");
         var parameters = new List<Parameter>();
-        if (!AdvanceIfMatch(TokenTypes.RParen))
+        if (Match(TokenTypes.LParen) && PeekMatch(1, TokenTypes.Param))
         {
             do
             {
@@ -684,8 +673,7 @@ public class ProgramParser : TokenParser
                 var parameterType = ParseTypeSymbol();
                 Consume(TokenTypes.RParen, "expect enclosing ) in parameter definition");
                 parameters.Add(new(parameterName, parameterType));
-            } while(!AtEnd() && !Match(TokenTypes.RParen));
-            Consume(TokenTypes.RParen, "expect enclosing ) in parameter list");
+            } while(!AtEnd() && Match(TokenTypes.LParen) && PeekMatch(1, TokenTypes.Param));
         }
         var body = new List<ExpressionBase>();
         if (!AdvanceIfMatch(TokenTypes.RParen))
@@ -703,16 +691,15 @@ public class ProgramParser : TokenParser
     public FunctionDefinition ParseLambdaFunctionDefinition()
     {
         /*
-         * (defn int (params (param argc int) (param argv ptr[string]))
-         * 
+         * (defn int (param argc int) (param argv ptr[string])
+         *  //...
+         * )
          * 
          */
         IToken name = Previous();   
         var returnType = ParseTypeSymbol();
-        Consume(TokenTypes.LParen, "expect parameter list");
-        Consume(TokenTypes.Params, "expect paramter list. IE (params (param argc int) (param argv ptr<string>))");
         var parameters = new List<Parameter>();
-        if (!AdvanceIfMatch(TokenTypes.RParen))
+        if (Match(TokenTypes.LParen) && PeekMatch(1, TokenTypes.Param))
         {
             do
             {
@@ -722,8 +709,7 @@ public class ProgramParser : TokenParser
                 var parameterType = ParseTypeSymbol();
                 Consume(TokenTypes.RParen, "expect enclosing ) in parameter definition");
                 parameters.Add(new(parameterName, parameterType));
-            } while (!AtEnd() && !Match(TokenTypes.RParen));
-            Consume(TokenTypes.RParen, "expect enclosing ) in parameter list");
+            } while (!AtEnd() && Match(TokenTypes.LParen) && PeekMatch(1, TokenTypes.Param));
         }
         var body = new List<ExpressionBase>();
         if (!AdvanceIfMatch(TokenTypes.RParen))
@@ -743,7 +729,7 @@ public class ProgramParser : TokenParser
     {
         /*
          * (import mscvrt cdecl (symbol `_printf`) 
-         *          printf:void (params (param string s)))
+         *          printf:void (param string s))
          * 
          * 
          */
@@ -760,10 +746,8 @@ public class ProgramParser : TokenParser
             importSymbol = Consume(BuiltinTokenTypes.Word, "expect import symbol");
             Consume(TokenTypes.RParen, "expect enclosing ) in symbol annotation");
         }
-        Consume(TokenTypes.LParen, "expect parameter list");
-        Consume(TokenTypes.Params, "expect paramter list. IE (params (param argc int) (param argv ptr<string>))");
         var parameters = new List<Parameter>();
-        if (!AdvanceIfMatch(TokenTypes.RParen))
+        if (Match(TokenTypes.LParen) && PeekMatch(1, TokenTypes.Param))
         {
             do
             {
@@ -773,8 +757,7 @@ public class ProgramParser : TokenParser
                 var parameterType = ParseTypeSymbol();
                 Consume(TokenTypes.RParen, "expect enclosing ) in parameter definition");
                 parameters.Add(new(parameterName, parameterType));
-            } while (!AtEnd() && !Match(TokenTypes.RParen));
-            Consume(TokenTypes.RParen, "expect enclosing ) in parameter list");
+            } while (!AtEnd() && Match(TokenTypes.LParen) && PeekMatch(1, TokenTypes.Param));
         }
         Consume(TokenTypes.RParen, "expect enclosing ) after imported function definition");
         return new ImportedFunctionDefinition(functionName, returnType, parameters, callingConvention, libraryAlias, importSymbol);
