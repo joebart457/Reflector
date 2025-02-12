@@ -1,33 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Platforms>AnyCPU;x86</Platforms>
+    <Platforms>AnyCPU</Platforms>
+	  <DebugType>embedded</DebugType>
 	  <PublishSingleFile>true</PublishSingleFile>
 	  <SelfContained>true</SelfContained>
-	  <RuntimeIdentifier>win-x86</RuntimeIdentifier>
 	  <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	  <Version>0.2.1</Version>
+	  <Title>Language.Experimental</Title>
+	  <Authors>Jimmy</Authors>
+	  <Description>Core package for interacting with the Language</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CliLogger" Version="2.0.1" />
-    <PackageReference Include="CliParser" Version="3.1.0" />
     <PackageReference Include="ParserLite" Version="8.1.1" />
   </ItemGroup>
-	<ItemGroup>
-		<Content Include="FASM.DLL">
-			<Pack>true</Pack>
-			<PackagePath>lib\$(TargetFramework)</PackagePath>
-		</Content>
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Update="FASM.DLL">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-	</ItemGroup>
 </Project>

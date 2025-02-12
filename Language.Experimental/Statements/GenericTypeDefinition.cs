@@ -1,4 +1,4 @@
-﻿using Language.Experimental.Compiler.TypeResolver;
+﻿using Language.Experimental.Interfaces;
 using Language.Experimental.Parser;
 using Language.Experimental.TypedStatements;
 using ParserLite.Exceptions;
@@ -52,12 +52,12 @@ public class GenericTypeDefinition : StatementBase
         return new TypeDefinition(instantiatedTypeNameToken, newFields);
     }
 
-    public override void GatherSignature(TypeResolver typeResolver)
+    public override void GatherSignature(ITypeResolver typeResolver)
     {
         typeResolver.GatherSignature(this);
     }
 
-    public override TypedStatement Resolve(TypeResolver typeResolver)
+    public override TypedStatement Resolve(ITypeResolver typeResolver)
     {
         throw new NotImplementedException();
     }

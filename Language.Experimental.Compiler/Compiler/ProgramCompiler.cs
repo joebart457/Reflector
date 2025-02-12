@@ -1,14 +1,14 @@
 ﻿using Language.Experimental.Compiler.CodeGenerator.Fasm;
 using Language.Experimental.Compiler.Optimizer;
-using Language.Experimental.Compiler.TypeResolver;
 using Language.Experimental.Parser;
+using Language.Experimental.TypeResolver;
 
 namespace Language.Experimental.Compiler;
 
 public class X86ProgramCompiler
 {
     private readonly ProgramParser _parser = new();
-    private readonly TypeResolver.TypeResolver _typeResolver = new();
+    private readonly Experimental.TypeResolver.TypeResolver _typeResolver = new();
     private readonly X86AssemblyOptimizer _optimizer = new();
     public string? EmitBinary(CompilationOptions compilationOptions)
     {

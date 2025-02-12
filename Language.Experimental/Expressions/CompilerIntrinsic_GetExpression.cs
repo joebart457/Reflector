@@ -1,11 +1,11 @@
-﻿using Language.Experimental.Compiler.TypeResolver;
+﻿using Language.Experimental.Interfaces;
 using Language.Experimental.Parser;
 using Language.Experimental.TypedExpressions;
 using TokenizerCore.Interfaces;
 
 namespace Language.Experimental.Expressions;
 
-internal class CompilerIntrinsic_GetExpression : ExpressionBase
+public class CompilerIntrinsic_GetExpression : ExpressionBase
 {
     public TypeSymbol RetrievedType { get; set; }
     public ExpressionBase ContextPointer { get; set; }
@@ -17,7 +17,7 @@ internal class CompilerIntrinsic_GetExpression : ExpressionBase
         MemberOffset = memberOffset;
     }
 
-    public override TypedExpression Resolve(TypeResolver typeResolver)
+    public override TypedExpression Resolve(ITypeResolver typeResolver)
     {
         return typeResolver.Resolve(this);
     }

@@ -1,4 +1,4 @@
-﻿using Language.Experimental.Compiler.TypeResolver;
+﻿using Language.Experimental.Interfaces;
 using Language.Experimental.TypedStatements;
 using TokenizerCore.Interfaces;
 
@@ -13,12 +13,12 @@ public class ImportLibraryDefinition : StatementBase
         LibraryPath = libraryPath;
     }
 
-    public override void GatherSignature(TypeResolver typeResolver)
+    public override void GatherSignature(ITypeResolver typeResolver)
     {
         typeResolver.GatherSignature(this);
     }
 
-    public override TypedStatement Resolve(TypeResolver typeResolver)
+    public override TypedStatement Resolve(ITypeResolver typeResolver)
     {
         return typeResolver.Resolve(this);
     }

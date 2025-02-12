@@ -1,4 +1,4 @@
-﻿using Language.Experimental.Compiler.TypeResolver;
+﻿using Language.Experimental.Interfaces;
 using Language.Experimental.Parser;
 using Language.Experimental.TypedExpressions;
 using TokenizerCore.Interfaces;
@@ -10,7 +10,7 @@ public class IdentifierExpression : ExpressionBase
     {
     }
 
-    public override TypedExpression Resolve(TypeResolver typeResolver)
+    public override TypedExpression Resolve(ITypeResolver typeResolver)
     {
         return typeResolver.Resolve(this);
     }

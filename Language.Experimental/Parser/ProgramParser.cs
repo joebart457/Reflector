@@ -1,8 +1,6 @@
 ﻿using Language.Experimental.Compiler.Instructions;
-using Language.Experimental.Constants;
 using Language.Experimental.Statements;
 using Language.Experimental.Expressions;
-using Language.Experimental.Statements;
 using ParserLite;
 using ParserLite.Exceptions;
 using System.Runtime.InteropServices;
@@ -561,7 +559,13 @@ public class ProgramParser : TokenParser
 
     private StatementBase? ParseNext()
     {
-        return ParseStatement();
+        var startToken = Current();
+        var statement = ParseStatement();
+        if (statement == null) return null;
+        var endToken = Previous();
+        statement.StartToken = startToken;
+        statement.EndToken = endToken;
+        return statement;
     }
 
     private StatementBase ParseTypeDefinition()
@@ -788,8 +792,14 @@ public class ProgramParser : TokenParser
 
     public ExpressionBase ParseExpression()
     {
-        if (AdvanceIfMatch(TokenTypes.LBracket)) return ParseCast();
-        return ParseCall();
+        var startToken = Current();       
+        ExpressionBase expression;
+        if (AdvanceIfMatch(TokenTypes.LBracket)) expression = ParseCast();
+        else expression = ParseCall();
+        var endToken = Previous();
+        expression.StartToken = startToken;
+        expression.EndToken = endToken;
+        return expression;
     }
 
     private ExpressionBase ParseCast()
@@ -932,6 +942,18 @@ public class ProgramParser : TokenParser
         if (AdvanceIfMatch(BuiltinTokenTypes.String))
         {
             return new LiteralExpression(Previous(), Previous().Lexeme);
+        }
+        if (AdvanceIfMatch(TokenTypes.True))
+        {
+            return new LiteralExpression(Previous(), 1);
+        }
+        if (AdvanceIfMatch(TokenTypes.False))
+        {
+            return new LiteralExpression(Previous(), 0);
+        }
+        if (AdvanceIfMatch(TokenTypes.Null))
+        {
+            return new LiteralExpression(Previous(), null);
         }
         throw new ParsingException(Current(), $"encountered unexpected token {Current()}");
     }

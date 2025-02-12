@@ -1,9 +1,8 @@
 ﻿using CliParser;
 using Language.Experimental.Compiler.CodeGenerator.Fasm;
-using Language.Experimental.Compiler;
 using Logger;
 
-namespace Language.Experimental.Services;
+namespace Language.Experimental.Compiler.Services;
 
 [Entry("lang.exe")]
 public class StartupService

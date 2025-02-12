@@ -1,6 +1,7 @@
 ﻿using Language.Experimental.Compiler;
 using Language.Experimental.Constants;
 using Language.Experimental.Models;
+using Language.Experimental.Statements;
 using System.Runtime.InteropServices;
 using TokenizerCore.Interfaces;
 
@@ -18,7 +19,7 @@ public class TypedImportedFunctionDefinition: TypedStatement, ITypedFunctionInfo
     public bool IsExported => false;
     public IToken ExportedSymbol => throw new InvalidOperationException($"function {FunctionName.Lexeme} cannot be exported: export forwarding not supported");
 
-    public TypedImportedFunctionDefinition(IToken functionName, TypeInfo returnType, List<TypedParameter> parameters, CallingConvention callingConvention, IToken libraryAlias, IToken functionSymbol)
+    public TypedImportedFunctionDefinition(StatementBase originalStatement, IToken functionName, TypeInfo returnType, List<TypedParameter> parameters, CallingConvention callingConvention, IToken libraryAlias, IToken functionSymbol): base(originalStatement)
     {
         FunctionName = functionName;
         ReturnType = returnType;

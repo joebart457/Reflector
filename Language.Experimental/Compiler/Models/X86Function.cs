@@ -1,19 +1,18 @@
 ﻿using Language.Experimental.Compiler.Instructions;
 using Language.Experimental.Extensions;
-using Language.Experimental.Statements;
 using Language.Experimental.TypedExpressions;
 using Language.Experimental.TypedStatements;
 using System.Runtime.InteropServices;
 using System.Text;
 using TokenizerCore.Interfaces;
 
-namespace Language.Experimental.Compiler;
+namespace Language.Experimental.Compiler.Models;
 
 
 public class X86Function
 {
     public TypedFunctionDefinition OriginalDeclaration { get; set; }
-    public List<TypedLocalVariableExpression> LocalVariables{ get; set; }
+    public List<TypedLocalVariableExpression> LocalVariables { get; set; }
     public List<X86Instruction> Instructions { get; set; } = new();
     public CallingConvention CallingConvention => OriginalDeclaration.CallingConvention;
     public List<TypedParameter> Parameters => OriginalDeclaration.Parameters;

@@ -3,6 +3,7 @@ using Language.Experimental.Compiler.Instructions;
 using Language.Experimental.Constants;
 using Language.Experimental.Expressions;
 using Language.Experimental.Models;
+using Language.Experimental.Statements;
 using Language.Experimental.TypedExpressions;
 using System.Runtime.InteropServices;
 using TokenizerCore.Interfaces;
@@ -22,7 +23,7 @@ public class TypedFunctionDefinition: TypedStatement, ITypedFunctionInfo
     public bool IsImported => false;
     public IToken FunctionSymbol => ExportedSymbol;
 
-    public TypedFunctionDefinition(IToken functionName, TypeInfo returnType, List<TypedParameter> parameters, List<TypedExpression> bodyStatements)
+    public TypedFunctionDefinition(StatementBase originalStatement, IToken functionName, TypeInfo returnType, List<TypedParameter> parameters, List<TypedExpression> bodyStatements): base(originalStatement)
     {
         FunctionName = functionName;
         ReturnType = returnType;
@@ -34,7 +35,7 @@ public class TypedFunctionDefinition: TypedStatement, ITypedFunctionInfo
     }
 
 
-    public TypedFunctionDefinition(IToken functionName, TypeInfo returnType, List<TypedParameter> parameters, List<TypedExpression> bodyStatements, CallingConvention callingConvention, bool isExported, IToken exportedSymbol)
+    public TypedFunctionDefinition(StatementBase originalStatement, IToken functionName, TypeInfo returnType, List<TypedParameter> parameters, List<TypedExpression> bodyStatements, CallingConvention callingConvention, bool isExported, IToken exportedSymbol): base(originalStatement)
     {
         FunctionName = functionName;
         ReturnType = returnType;

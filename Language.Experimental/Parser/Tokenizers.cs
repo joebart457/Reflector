@@ -44,6 +44,10 @@ public static class Tokenizers
                     new TokenizerRule(TokenTypes.Type, "type"),
                     new TokenizerRule(TokenTypes.Field, "field"),
 
+                    new TokenizerRule(TokenTypes.True, "true"),
+                    new TokenizerRule(TokenTypes.False, "false"),
+                    new TokenizerRule(TokenTypes.Null, "null"),
+
                     new TokenizerRule(TokenTypes.InlineAssembly, "__asm {", enclosingLeft: "__asm {", enclosingRight: "}", ignoreCase: true),
                     new TokenizerRule(TokenTypes.CompilerIntrinsicGet, "_ci_get"),
                     new TokenizerRule(TokenTypes.CompilerIntrinsicSet, "_ci_set"),

@@ -1,4 +1,4 @@
-﻿using Language.Experimental.Compiler.TypeResolver;
+﻿using Language.Experimental.Interfaces;
 using Language.Experimental.Parser;
 using Language.Experimental.Statements;
 using Language.Experimental.TypedExpressions;
@@ -14,7 +14,7 @@ public class LambdaExpression : ExpressionBase
         FunctionDefinition = functionDefinition;
     }
 
-    public override TypedExpression Resolve(TypeResolver typeResolver)
+    public override TypedExpression Resolve(ITypeResolver typeResolver)
     {
         return typeResolver.Resolve(this);
     }

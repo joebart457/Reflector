@@ -1,6 +1,6 @@
 ﻿using Language.Experimental.TypedStatements;
 
-namespace Language.Experimental.Compiler.TypeResolver;
+namespace Language.Experimental.TypeResolver;
 
 public class TypeResolverResult
 {

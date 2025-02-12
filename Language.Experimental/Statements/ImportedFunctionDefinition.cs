@@ -1,4 +1,4 @@
-﻿using Language.Experimental.Compiler.TypeResolver;
+﻿using Language.Experimental.Interfaces;
 using Language.Experimental.Models;
 using Language.Experimental.Parser;
 using Language.Experimental.TypedStatements;
@@ -33,12 +33,12 @@ public class ImportedFunctionDefinition : StatementBase
         throw new NotImplementedException();
     }
 
-    public override void GatherSignature(TypeResolver typeResolver)
+    public override void GatherSignature(ITypeResolver typeResolver)
     {
         typeResolver.GatherSignature(this);
     }
 
-    public override TypedStatement Resolve(TypeResolver typeResolver)
+    public override TypedStatement Resolve(ITypeResolver typeResolver)
     {
         return typeResolver.Resolve(this);
     }

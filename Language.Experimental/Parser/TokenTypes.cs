@@ -14,6 +14,10 @@ public static class TokenTypes
     public const string CallingConvention = "CallingConvention";
     public const string IntrinsicType = "IntrinsicType";
 
+    public const string True = "True";
+    public const string False = "False";
+    public const string Null = "Null";
+
     public const string DefineFunction = "DefineFunction";
     public const string Import = "Import";
     public const string Param = "Param";
