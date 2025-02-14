@@ -71,8 +71,8 @@ public class TypeInfo
 
     public override string ToString()
     {
-        if (GenericTypeArgument != null) return $"{IntrinsicType}[{GenericTypeArgument}]";
-        return $"{IntrinsicType}";
+        if (GenericTypeArgument != null) return $"{IntrinsicType.ToString().ToLower()}[{GenericTypeArgument}]";
+        return $"{IntrinsicType.ToString().ToLower()}";
     }
 
     public virtual bool TryExtractGenericArgumentTypes(Dictionary<TypeSymbol, TypeInfo> genericParameterToArgumentTypeMap, TypeSymbol parameterType)

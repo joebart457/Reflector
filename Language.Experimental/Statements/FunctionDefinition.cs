@@ -43,35 +43,6 @@ public class FunctionDefinition : StatementBase
         ExportedSymbol = exportedSymbol;
     }
 
-
-
-    public IEnumerable<LocalVariableExpression> ExtractLocalVariableExpressions()
-    {
-        return BodyStatements.SelectMany(e => ExtractLocalVariableExpressionsHelper(e));
-    }
-
-    private List<LocalVariableExpression> ExtractLocalVariableExpressionsHelper(ExpressionBase expression)
-    {
-        var ls = new List<LocalVariableExpression>();
-        if (expression is CallExpression ce)
-        {
-            ls.AddRange(ExtractLocalVariableExpressionsHelper(ce.CallTarget));
-            foreach (var arg in ce.Arguments) ls.AddRange(ExtractLocalVariableExpressionsHelper(arg));
-        }
-        else if (expression is CompilerIntrinsic_GetExpression ci_get) ls.AddRange(ExtractLocalVariableExpressionsHelper(ci_get.ContextPointer));
-        else if (expression is CompilerIntrinsic_SetExpression ci_set) ls.AddRange(ExtractLocalVariableExpressionsHelper(ci_set.ContextPointer));
-        else if (expression is GetExpression get)
-        {
-            ls.AddRange(ExtractLocalVariableExpressionsHelper(get.Instance));
-        }
-        else if (expression is IdentifierExpression id) { }
-        else if (expression is InlineAssemblyExpression asm) { }
-        else if (expression is LiteralExpression le) { }
-        else if (expression is LocalVariableExpression lve) ls.Add(lve);
-        else throw new InvalidOperationException($"unsupported expression type {expression.GetType().Name}");
-        return ls;
-    }
-
     public string GetDecoratedFunctionIdentifier()
     {
         if (CallingConvention == CallingConvention.Cdecl) return $"_{FunctionName.Lexeme}";

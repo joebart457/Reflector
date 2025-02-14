@@ -1,4 +1,6 @@
 ﻿
+using TokenizerCore.Model;
+
 namespace Language.Experimental.Parser;
 
 // The following is in the .Parser namespace because it is not actually used in assembly code generation
@@ -53,4 +55,14 @@ public enum AssemblyInstruction
     Divss,
     Cvtsi2ss,
     Cvtss2si
+}
+
+public static class AssemblyInstructionTokenizerRuleGenerator
+{
+    public static List<TokenizerRule> AddAsssemblyInstructionParsingRules(this List<TokenizerRule> rules)
+    {
+        rules.AddRange(GetAsssemblyInstructionParsingRules);
+        return rules;
+    }
+    public static List<TokenizerRule> GetAsssemblyInstructionParsingRules => Enum.GetNames<AssemblyInstruction>().Select(x => new TokenizerRule(TokenTypes.AssemblyInstruction, $"_{x.ToLower()}")).ToList();
 }

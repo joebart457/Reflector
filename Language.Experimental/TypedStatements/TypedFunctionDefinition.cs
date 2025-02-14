@@ -70,6 +70,11 @@ public class TypedFunctionDefinition: TypedStatement, ITypedFunctionInfo
         else if (expression is TypedInlineAssemblyExpression asm) { }
         else if (expression is TypedLiteralExpression le) { }
         else if (expression is TypedFunctionPointerExpression fpe) { }
+        else if (expression is TypedSetExpression tse)
+        {
+            ls.AddRange(ExtractLocalVariableExpressionsHelper(tse.AssignmentTarget));
+            ls.AddRange(ExtractLocalVariableExpressionsHelper(tse.ValueToAssign));
+        }
         else if (expression is TypedLocalVariableExpression lve) ls.Add(lve);
         else if (expression is TypedReturnExpression tre)
         { 

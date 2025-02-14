@@ -99,6 +99,11 @@ public class StructTypeInfo : TypeInfo
     {
         return new TypeSymbol(Name, []);
     }
+
+    public override string ToString()
+    {
+        return Name.Lexeme;
+    }
 }
 
 public class StructFieldInfo

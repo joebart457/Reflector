@@ -68,7 +68,7 @@ public class FunctionPtrTypeInfo: TypeInfo
     {
         var allTypeArguments = ParameterTypes.Select(x => x).ToList();
         allTypeArguments.Add(ReturnType);
-        return $"{IntrinsicType}[{string.Join(",", allTypeArguments.Select(x => x.ToString()))}]";
+        return $"{IntrinsicType.ToString().ToLower()}[{string.Join(",", allTypeArguments.Select(x => x.ToString()))}]";
     }
 
     public override bool TryExtractGenericArgumentTypes(Dictionary<TypeSymbol, TypeInfo> genericParameterToArgumentTypeMap, TypeSymbol parameterType)

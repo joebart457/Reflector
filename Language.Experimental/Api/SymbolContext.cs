@@ -59,6 +59,10 @@ public class FunctionContext
         }
         return null;
     }
+
+    public TypedParameter? GetParameter(IToken paramterName) => FunctionDefinition.Parameters.Find(x => x.Name.Lexeme == paramterName.Lexeme);
+    public TypedLocalVariableExpression? GetLocalVariableExpression(IToken localVariableName) => FunctionDefinition.ExtractLocalVariableExpressions().FirstOrDefault(x => x.Identifier.Lexeme == localVariableName.Lexeme);
+
 }
 
 public class ProgramContext
@@ -66,21 +70,63 @@ public class ProgramContext
     public List<TypedFunctionDefinition> FunctionDefinitions { get; set; } = new();
     public List<TypedImportedFunctionDefinition> ImportedFunctionDefinitions { get; set; } = new();
     public List<TypedImportLibraryDefinition> ImportLibraryDefinitions { get; set; } = new();
-    public List<TypeInfo> AvailableTypes { get; set; } = new();
+    public List<StructTypeInfo> UserDefinedTypes { get; set; } = new();
     public List<(IToken, string)> ValidationErrors { get; set; } = new();
+    public List<IToken> Tokens { get; set; } = new();
     public FunctionContext? GetFunctionContext(int line, int column)
     {
+        FunctionContext? match = null;
         foreach(var function in FunctionDefinitions)
         {
             var functionContext = new FunctionContext(function, this);
-            if (!functionContext.Contains(line, column)) return functionContext;
+            if (functionContext.Contains(line, column))
+            {
+                if (match == null) match = functionContext;
+                // search for inner most matching function
+                else if (match.Contains(functionContext.Start.Line, functionContext.Start.Column)) match = functionContext;
+            }
         }
-        return null;
+        return match;
     }
 
     public void AddValidationError(ParsingException parsingException)
     {
         ValidationErrors.Add((parsingException.Token, parsingException.Message));
+    }
+
+    public IToken? GetTokenAt(int line, int column)
+    {
+        foreach(var token in Tokens)
+        {
+            if (ContainsToken(token, line, column)) return token;
+        }
+        return null;
+    }
+
+    public (int index, IToken? token) GetTokenAndIndexAt(int line, int column)
+    {
+        int index = 0;
+        foreach (var token in Tokens)
+        {
+            if (ContainsToken(token, line, column)) return (index, token);
+            index++;
+        }
+        return (-1, null);
+    }
+
+    public IToken? GetPreviousToken(int index)
+    {
+        index--;
+        if (index <0 || index >= Tokens.Count) return null;
+        return Tokens[index];
+    }
+
+    public bool ContainsToken(IToken token, int line, int column)
+    {
+        if (line == token.Start.Line && line == token.End.Line) return token.Start.Column <= column && column <= token.End.Column;
+        if (line == token.Start.Line) return token.Start.Column <= column;
+        if (line == token.End.Line) return token.End.Column >= column;
+        return token.Start.Line <= line && token.End.Line >= line;
     }
 
 }

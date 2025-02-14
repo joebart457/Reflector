@@ -39,6 +39,7 @@ public static class Tokenizers
                     new TokenizerRule(TokenTypes.Symbol, "symbol"),
                     new TokenizerRule(TokenTypes.Param, "param"),
                     new TokenizerRule(TokenTypes.Return, "return"),
+                    new TokenizerRule(TokenTypes.Set, "set"),
                     new TokenizerRule(TokenTypes.Gen, "gen"),
 
                     new TokenizerRule(TokenTypes.Type, "type"),
@@ -47,6 +48,7 @@ public static class Tokenizers
                     new TokenizerRule(TokenTypes.True, "true"),
                     new TokenizerRule(TokenTypes.False, "false"),
                     new TokenizerRule(TokenTypes.Null, "null"),
+                    new TokenizerRule(TokenTypes.Local, "local"),
 
                     new TokenizerRule(TokenTypes.InlineAssembly, "__asm {", enclosingLeft: "__asm {", enclosingRight: "}", ignoreCase: true),
                     new TokenizerRule(TokenTypes.CompilerIntrinsicGet, "_ci_get"),
@@ -71,7 +73,7 @@ public static class Tokenizers
                     new TokenizerRule(BuiltinTokenTypes.String, "\"", enclosingLeft: "\"", enclosingRight: "\""),
                     new TokenizerRule(BuiltinTokenTypes.String, "'", enclosingLeft: "'", enclosingRight: "'"),
                     new TokenizerRule(BuiltinTokenTypes.Word, "`", enclosingLeft: "`", enclosingRight: "`"),
-        };
+        }.AddAsssemblyInstructionParsingRules();
     public static TokenizerSettings DefaultSettings => new TokenizerSettings
     {
         AllowNegatives = true,

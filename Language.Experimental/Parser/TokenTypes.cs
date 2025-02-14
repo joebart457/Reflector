@@ -31,6 +31,7 @@ public static class TokenTypes
     public const string Field = "Field";
     public const string Set = "Set";
     public const string Gen = "Gen";
+    public const string Local = "Local";
 
 
     // The following token types are used purely for inline assembly parsing

@@ -15,23 +15,27 @@ namespace Language.Experimental.TypeResolver;
 
 public class TypeResolver : ITypeResolver
 {
-    private Dictionary<string, GenericTypeDefinition> _genericTypeDefinitions = new();
-    private Dictionary<TypeSymbol, StructTypeInfo> _resolvedTypes = new();
+    protected Dictionary<string, GenericTypeDefinition> _genericTypeDefinitions = new();
+    protected Dictionary<TypeSymbol, StructTypeInfo> _resolvedTypes = new();
 
-    private Dictionary<string, GenericFunctionDefinition> _genericFunctionDefinitions = new();
-    private Dictionary<string, TypedFunctionDefinition> _resolvedFunctionDefinitions = new();
+    protected Dictionary<string, GenericFunctionDefinition> _genericFunctionDefinitions = new();
+    protected Dictionary<string, TypedFunctionDefinition> _resolvedFunctionDefinitions = new();
 
-    private TypedFunctionDefinition? _currentFunctionTarget;
-    private TypedFunctionDefinition CurrentFunctionTarget => _currentFunctionTarget ?? throw new ArgumentNullException(nameof(CurrentFunctionTarget));
-    private Dictionary<string, TypeInfo> _localVariableTypeMap = new();
-    private Dictionary<string, TypedFunctionDefinition> _functionDefinitions = new();
-    private Dictionary<string, TypedImportedFunctionDefinition> _importedFunctionDefinitions = new();
-    private Dictionary<string, TypedImportLibraryDefinition> _importLibraries = new();
-    private List<TypedFunctionDefinition> _lambdaFunctions = new();
+    protected TypedFunctionDefinition? _currentFunctionTarget;
+    protected TypedFunctionDefinition CurrentFunctionTarget => _currentFunctionTarget ?? throw new ArgumentNullException(nameof(CurrentFunctionTarget));
+    protected Dictionary<string, TypeInfo> _localVariableTypeMap = new();
+    protected Dictionary<string, TypedFunctionDefinition> _functionDefinitions = new();
+    protected Dictionary<string, TypedImportedFunctionDefinition> _importedFunctionDefinitions = new();
+    protected Dictionary<string, TypedImportLibraryDefinition> _importLibraries = new();
+    protected List<TypedFunctionDefinition> _lambdaFunctions = new();
     public TypeResolverResult Resolve(ParsingResult parsingResult)
     {
         GatherSignatures(parsingResult);
         var result = new TypeResolverResult();
+        foreach(var typeDefinition in parsingResult.TypeDefinitions)
+        {
+            ResolveTypeDefinition(typeDefinition);
+        }
         foreach (var statement in parsingResult.ImportLibraryDefinitions)
         {
             result.ImportLibraries.Add((TypedImportLibraryDefinition)statement.Resolve(this));
@@ -48,8 +52,6 @@ public class TypeResolver : ITypeResolver
         result.Functions.AddRange(_resolvedFunctionDefinitions.Values);
         return result;
     }
-
-
 
     private void GatherSignatures(ParsingResult parsingResult)
     {
@@ -110,11 +112,11 @@ public class TypeResolver : ITypeResolver
     {
         if (functionDefinition.Parameters.DistinctBy(x => x.Name.Lexeme).Count() != functionDefinition.Parameters.Count)
             throw new ParsingException(functionDefinition.FunctionName, $"redefinition of parameter name");
-        var resolvedParameters = functionDefinition.Parameters.Select(x => new TypedParameter(x.Name, Resolve(x.TypeSymbol))).ToList();
+        var resolvedParameters = functionDefinition.Parameters.Select(x => new TypedParameter(ReclassifyToken(x.Name, ReclassifiedTokenTypes.Parameter), Resolve(x.TypeSymbol))).ToList();
 
         var invalidParameter = resolvedParameters.Find(x => !x.TypeInfo.IsStackAllocatable);
         if (invalidParameter != null)
-            throw new ParsingException(functionDefinition.FunctionName, $"invalid parameter type {invalidParameter.TypeInfo}. Type is not stack allocatable");
+            throw new ParsingException(invalidParameter.Name, $"invalid parameter type {invalidParameter.TypeInfo}: type is not stack allocatable");
 
         var functionBody = new List<TypedExpression>();
 
@@ -130,13 +132,13 @@ public class TypeResolver : ITypeResolver
     {
         if (importedFunctionDefinition.Parameters.DistinctBy(x => x.Name.Lexeme).Count() != importedFunctionDefinition.Parameters.Count)
             throw new ParsingException(importedFunctionDefinition.FunctionName, $"redefinition of parameter name");
-        var resolvedParameters = importedFunctionDefinition.Parameters.Select(x => new TypedParameter(x.Name, Resolve(x.TypeSymbol))).ToList();
+        var resolvedParameters = importedFunctionDefinition.Parameters.Select(x => new TypedParameter(ReclassifyToken(x.Name, ReclassifiedTokenTypes.Parameter), Resolve(x.TypeSymbol))).ToList();
         var returnType = Resolve(importedFunctionDefinition.ReturnType);
         if (!returnType.IsStackAllocatable && !returnType.Is(IntrinsicType.Void))
             throw new ParsingException(importedFunctionDefinition.FunctionName, $"invalid size of return. Type is {returnType}");
         var invalidParameter = resolvedParameters.Find(x => !x.TypeInfo.IsStackAllocatable);
         if (invalidParameter != null)
-            throw new ParsingException(importedFunctionDefinition.FunctionName, $"invalid parameter type {invalidParameter.TypeInfo}. Type is not stack allocatable");
+            throw new ParsingException(invalidParameter.Name, $"invalid parameter type {invalidParameter.TypeInfo}: type is not stack allocatable");
 
         if (_functionDefinitions.ContainsKey(importedFunctionDefinition.FunctionName.Lexeme))
             throw new ParsingException(importedFunctionDefinition.FunctionName, $"redefinition of function {importedFunctionDefinition.FunctionName.Lexeme}");
@@ -163,7 +165,7 @@ public class TypeResolver : ITypeResolver
         _resolvedFunctionDefinitions[typedFunctionDefinition.FunctionName.Lexeme] = typedFunctionDefinition;
     }
 
-    internal TypeInfo ResolveTypeDefinition(TypeDefinition typeDefinition)
+    internal StructTypeInfo ResolveTypeDefinition(TypeDefinition typeDefinition)
     {
         var typeSymbol = new TypeSymbol(typeDefinition.TypeName, new());
         if (!_resolvedTypes.TryGetValue(typeSymbol, out var foundType))
@@ -185,6 +187,10 @@ public class TypeResolver : ITypeResolver
             if (Enum.TryParse<IntrinsicType>(typeSymbol.TypeName.Lexeme, true, out var intrinsicType))
                 return ResolveIntrinsicType(intrinsicType, typeSymbol.TypeName, typeSymbol.TypeArguments);
             else throw new ParsingException(typeSymbol.TypeName, $"invalid intrinsic type {typeSymbol}");
+        }
+        else
+        {
+            ReclassifyToken(typeSymbol.TypeName, ReclassifiedTokenTypes.Type);
         }
         if (_resolvedTypes.TryGetValue(typeSymbol, out var typeInfo))
             return typeInfo;
@@ -235,7 +241,7 @@ public class TypeResolver : ITypeResolver
         throw new ParsingException(typeName, $"unsupported intrinsic type {intrinsicType}");
     }
 
-    public TypedStatement Resolve(FunctionDefinition functionDefinition)
+    public virtual TypedStatement Resolve(FunctionDefinition functionDefinition)
     {
         if (!_functionDefinitions.TryGetValue(functionDefinition.FunctionName.Lexeme, out _currentFunctionTarget))
             throw new ParsingException(functionDefinition.FunctionName, $"unresolved function reference {functionDefinition.FunctionName.Lexeme}");
@@ -244,6 +250,13 @@ public class TypeResolver : ITypeResolver
         foreach (var expression in functionDefinition.BodyStatements)
         {
             CurrentFunctionTarget.BodyStatements.Add(expression.Resolve(this));
+        }
+        var returnIndex = CurrentFunctionTarget.BodyStatements.FindIndex(x => x is TypedReturnExpression);
+        if (returnIndex == -1) throw new ParsingException(functionDefinition.FunctionName, $"function {functionDefinition.FunctionName.Lexeme} does not return");
+        if (returnIndex != CurrentFunctionTarget.BodyStatements.Count - 1)
+        {
+            var unreachableStatement = CurrentFunctionTarget.BodyStatements[returnIndex + 1];
+            throw new ParsingException(unreachableStatement.OriginalExpression.Token, $"unreachable code detected");
         }
         return CurrentFunctionTarget;
     }
@@ -328,15 +341,30 @@ public class TypeResolver : ITypeResolver
     public TypedExpression Resolve(IdentifierExpression identifierExpression)
     {
         var foundType = CurrentFunctionTarget.Parameters.Find(x => x.Name.Lexeme == identifierExpression.Token.Lexeme)?.TypeInfo;
-        if (foundType == null && !_localVariableTypeMap.TryGetValue(identifierExpression.Token.Lexeme, out foundType))
+        if (foundType != null)
+        {
+            ReclassifyToken(identifierExpression.Token, ReclassifiedTokenTypes.Parameter);
+        } 
+        else if (_localVariableTypeMap.TryGetValue(identifierExpression.Token.Lexeme, out foundType))
+        {
+            ReclassifyToken(identifierExpression.Token, ReclassifiedTokenTypes.Variable);
+        }
+        else
         {
             if (_functionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var functionWithMatchingName))
+            {
+                ReclassifyToken(identifierExpression.Token, ReclassifiedTokenTypes.Function);
                 return new TypedFunctionPointerExpression(functionWithMatchingName.GetFunctionPointerType(), identifierExpression, functionWithMatchingName.FunctionName, false); // identifiers only reference the function address so they can be used as lambdas
+            }
             if (_importedFunctionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var importedFunctionWithMatchingName))
+            {
+                ReclassifyToken(identifierExpression.Token, ReclassifiedTokenTypes.ImportedFunction);
                 return new TypedFunctionPointerExpression(importedFunctionWithMatchingName.GetFunctionPointerType(), identifierExpression, importedFunctionWithMatchingName.FunctionName, true);
+            }
         }
         if (foundType == null)
             throw new ParsingException(identifierExpression.Token, $"unresolved symbol {identifierExpression.Token.Lexeme}");
+
         return new TypedIdentifierExpression(foundType, identifierExpression, identifierExpression.Token);
     }
 
@@ -346,9 +374,15 @@ public class TypeResolver : ITypeResolver
         // (printf msg) 
 
         if (_functionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var functionWithMatchingName))
+        {
+            ReclassifyToken(identifierExpression.Token, ReclassifiedTokenTypes.Function);
             return functionWithMatchingName;
+        }
         if (_importedFunctionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var importedFunctionWithMatchingName))
+        {
+            ReclassifyToken(identifierExpression.Token, ReclassifiedTokenTypes.ImportedFunction);
             return importedFunctionWithMatchingName;
+        }        
         return null;
     }
 
@@ -383,30 +417,42 @@ public class TypeResolver : ITypeResolver
                 throw new ParsingException(genericFunctionReferenceExpression.Token, $"unable to resolve all parameters for call {genericFunction.FunctionName}. Missing parameters {string.Join(", ", missingParameters.Select(x => x.ToString()))}");
             return ResolveCallTarget(new GenericFunctionReferenceExpression(genericFunctionReferenceExpression.Token, resolvedGenericTypeArguments));
         }
-        else return ResolveCallTarget(genericFunctionReferenceExpression);
+        return ResolveCallTarget(genericFunctionReferenceExpression);
     }
 
     internal ITypedFunctionInfo ResolveCallTarget(GenericFunctionReferenceExpression genericFunctionReferenceExpression)
     {
         var symbol = $"{genericFunctionReferenceExpression.Identifier.Lexeme}!{string.Join('_', genericFunctionReferenceExpression.TypeArguments.Select(x => x.GetFlattenedName()))}";
-        if (_resolvedFunctionDefinitions.TryGetValue(symbol, out var resolvedFunctionDefinition)) return resolvedFunctionDefinition;
+        if (_resolvedFunctionDefinitions.TryGetValue(symbol, out var resolvedFunctionDefinition))
+        {
+            ReclassifyToken(genericFunctionReferenceExpression.Identifier, ReclassifiedTokenTypes.Function);
+            return resolvedFunctionDefinition;
+        }
         if (!_genericFunctionDefinitions.TryGetValue(genericFunctionReferenceExpression.Identifier.Lexeme, out var genericFunctionDefinition))
             throw new ParsingException(genericFunctionReferenceExpression.Identifier, $"unresolved symbol to generic function definition {genericFunctionReferenceExpression.Identifier.Lexeme}");
         var functionDefinition = genericFunctionDefinition.ToFunctionDefinition(genericFunctionReferenceExpression.TypeArguments);
         GatherSignature(functionDefinition);
         var previousFunctionTarget = CurrentFunctionTarget;
+        var previousVariableMap = _localVariableTypeMap;
         var typedFunctionDefinition = (TypedFunctionDefinition)Resolve(functionDefinition);
         AddToResolvedGenericFunctions(typedFunctionDefinition);
         _currentFunctionTarget = previousFunctionTarget;
+        _localVariableTypeMap = previousVariableMap;
+        ReclassifyToken(genericFunctionReferenceExpression.Identifier, ReclassifiedTokenTypes.Function);
         return typedFunctionDefinition;
     }
 
     internal TypedExpression ResolveSetTarget(IdentifierExpression identifierExpression)
     {
         var foundType = CurrentFunctionTarget.Parameters.Find(x => x.Name.Lexeme == identifierExpression.Token.Lexeme)?.TypeInfo;
-        if (foundType == null) _localVariableTypeMap.TryGetValue(identifierExpression.Token.Lexeme, out foundType);
-        if (foundType == null)
+        if (foundType != null)
+        {
+            ReclassifyToken(identifierExpression.Token, ReclassifiedTokenTypes.Parameter);
+            return new TypedIdentifierExpression(foundType, identifierExpression, identifierExpression.Token);
+        }
+        if (!_localVariableTypeMap.TryGetValue(identifierExpression.Token.Lexeme, out foundType))
             throw new ParsingException(identifierExpression.Token, $"unresolved symbol {identifierExpression.Token.Lexeme}");
+        ReclassifyToken(identifierExpression.Token, ReclassifiedTokenTypes.Variable);
         return new TypedIdentifierExpression(foundType, identifierExpression, identifierExpression.Token);
     }
 
@@ -441,7 +487,8 @@ public class TypeResolver : ITypeResolver
         var initializer = localVariableExpression.Initializer?.Resolve(this);
         if (initializer != null && !initializer.TypeInfo.Equals(typeInfo))
             throw new ParsingException(localVariableExpression.Identifier, $"expect initializer value of type {typeInfo} but got {initializer.TypeInfo}");
-        return new TypedLocalVariableExpression(TypeInfo.Void, localVariableExpression, localVariableExpression.Identifier, initializer);
+        ReclassifyToken(localVariableExpression.Identifier, ReclassifiedTokenTypes.Variable);
+        return new TypedLocalVariableExpression(TypeInfo.Void, localVariableExpression, localVariableExpression.Identifier, typeInfo, initializer);
     }
 
     public TypedExpression Resolve(ReturnExpression returnExpression)
@@ -500,9 +547,11 @@ public class TypeResolver : ITypeResolver
         var functionDefinition = genericFunctionDefinition.ToFunctionDefinition(genericFunctionReferenceExpression.TypeArguments);
         GatherSignature(functionDefinition);
         var previousFunctionTarget = CurrentFunctionTarget;
+        var previousVariableMap = _localVariableTypeMap;
         var typedFunctionDefinition = (TypedFunctionDefinition)Resolve(functionDefinition);
         AddToResolvedGenericFunctions(typedFunctionDefinition);
         _currentFunctionTarget = previousFunctionTarget;
+        _localVariableTypeMap = previousVariableMap;
         return Resolve(new IdentifierExpression(typedFunctionDefinition.FunctionName));
     }
 
@@ -512,12 +561,22 @@ public class TypeResolver : ITypeResolver
         var anonymousToken = GetAnonymousFunctionLabel(lambdaExpression.FunctionDefinition.Token);
         lambdaExpression.FunctionDefinition.FunctionName = anonymousToken;
         GatherSignature(lambdaExpression.FunctionDefinition);
+        var previousFunctionTarget = CurrentFunctionTarget;
+        var previousVariableMap = _localVariableTypeMap;
         var flattenedLambda = (TypedFunctionDefinition)Resolve(lambdaExpression.FunctionDefinition);
         _lambdaFunctions.Add(flattenedLambda);
+        _currentFunctionTarget = previousFunctionTarget;
+        _localVariableTypeMap = previousVariableMap;
         return Resolve(new IdentifierExpression(anonymousToken));
     }
 
-    private IToken GetAnonymousFunctionLabel(IToken token) => new Token(BuiltinTokenTypes.Word, $"_anonymous__!{AnonymousFunctionIndex++}", token.Start, token.End);
+    protected IToken GetAnonymousFunctionLabel(IToken token) => new Token(BuiltinTokenTypes.Word, $"_anonymous__!{AnonymousFunctionIndex++}", token.Start, token.End);
 
-    private int AnonymousFunctionIndex = 0;
+    protected int AnonymousFunctionIndex = 0;
+
+    protected IToken ReclassifyToken(IToken token, string newClassification)
+    {
+        token.Type = newClassification;
+        return token;
+    }
 }

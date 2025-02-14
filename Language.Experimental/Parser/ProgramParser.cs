@@ -502,11 +502,13 @@ public class ProgramParser : TokenParser
     public ProgramParser(Tokenizer tokenizer)
     {
         _tokenizer = tokenizer;
+        OverrideCurrentOnNull = true;
     }
 
     public ProgramParser()
     {
         _tokenizer = Tokenizers.Default;
+        OverrideCurrentOnNull = true;
     }
     public ParsingResult ParseFile(string path, out List<ParsingException> errors)
     {
@@ -818,6 +820,8 @@ public class ProgramParser : TokenParser
             if (AdvanceIfMatch(TokenTypes.CompilerIntrinsicSet)) return ParseCompilerIntrinsicSet();
             if (AdvanceIfMatch(TokenTypes.Return)) return ParseReturn();
             if (AdvanceIfMatch(TokenTypes.DefineFunction)) return ParseLambdaFunction();
+            if (AdvanceIfMatch(TokenTypes.Local)) return ParseLocalVariable();
+            if (AdvanceIfMatch(TokenTypes.Set)) return ParseSet();
             if (Match(TokenTypes.AssemblyInstruction)) return ParseAssemblyInstruction();
             var token = Previous();
             if (AdvanceIfMatch(TokenTypes.RParen))
@@ -836,6 +840,20 @@ public class ProgramParser : TokenParser
         }
         else return ParseGet();
 
+    }
+
+    private ExpressionBase ParseLocalVariable()
+    {
+        var token = Consume(BuiltinTokenTypes.Word, "expect local variable identifier");
+        var type = ParseTypeSymbol();
+        ExpressionBase? initializer = null;
+        if (!AdvanceIfMatch(TokenTypes.RParen))
+        {
+            initializer = ParseExpression();
+            Consume(TokenTypes.RParen, "expect enclosing ) in local variable definition");
+        }
+
+        return new LocalVariableExpression(token, type, token, initializer);
     }
 
     private ExpressionBase ParseCompilerIntrinsicGet()
@@ -873,13 +891,19 @@ public class ProgramParser : TokenParser
 
     private ExpressionBase ParseLambdaFunction()
     {
-        return new LambdaExpression(Previous(), ParseLambdaFunctionDefinition());
+        var startToken = Current();
+        var functionDefinition = ParseLambdaFunctionDefinition();
+        var endToken = Previous();
+        functionDefinition.StartToken = startToken;
+        functionDefinition.EndToken = endToken;
+        return new LambdaExpression(startToken, functionDefinition);
     }
 
     private ExpressionBase ParseSet()
     {
         var assignmentTarget = ParseExpression();
         var valueToAssign = ParseExpression();
+        Consume(TokenTypes.RParen, "expect enclosing ) after set statement");
         return new SetExpression(Previous(), assignmentTarget, valueToAssign);
     }
 

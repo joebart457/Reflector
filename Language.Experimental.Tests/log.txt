@@ -1,1 +1,9 @@
-got here
+System.IndexOutOfRangeException: unable to retrieve current token at index 14
+   at ParserLite.TokenParser.Current()
+   at Language.Experimental.Parser.ProgramParser.ParseExpression() in C:\Users\Jimmy\Desktop\Repositories\FunctionLang\Language.Experimental\Parser\ProgramParser.cs:line 795
+   at Language.Experimental.Parser.ProgramParser.ParseFunctionDefinition(Boolean isLambda) in C:\Users\Jimmy\Desktop\Repositories\FunctionLang\Language.Experimental\Parser\ProgramParser.cs:line 687
+   at Language.Experimental.Parser.ProgramParser.ParseStatement() in C:\Users\Jimmy\Desktop\Repositories\FunctionLang\Language.Experimental\Parser\ProgramParser.cs:line 634
+   at Language.Experimental.Parser.ProgramParser.ParseNext() in C:\Users\Jimmy\Desktop\Repositories\FunctionLang\Language.Experimental\Parser\ProgramParser.cs:line 563
+   at Language.Experimental.Parser.ProgramParser.ParseText(String text, List`1& errors) in C:\Users\Jimmy\Desktop\Repositories\FunctionLang\Language.Experimental\Parser\ProgramParser.cs:line 532
+   at Language.Experimental.Api.LanguageInformationEngine.ResolveText(String text) in C:\Users\Jimmy\Desktop\Repositories\FunctionLang\Language.Experimental\Api\LanguageInformationEngine.cs:line 45
+   at SampleServer.App.ValidateTextDocument(TextDocumentItem document)
