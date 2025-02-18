@@ -21,7 +21,7 @@ public class TypedGetExpression : TypedExpression
 
     public override void Compile(X86CompilationContext cc)
     {
-        var offset = Instance.TypeInfo.GetFieldOffset(TargetField);
+        var offset = Instance.TypeInfo.GenericTypeArgument!.GetFieldOffset(TargetField);
         Instance.Compile(cc);
         cc.AddInstruction(X86Instructions.Pop(X86Register.esi));
         var fieldOffset = Offset.Create(X86Register.esi, offset);
@@ -30,10 +30,16 @@ public class TypedGetExpression : TypedExpression
 
     public RegisterOffset CompileAndReturnMemoryOffset(X86CompilationContext cc)
     {
-        var offset = Instance.TypeInfo.GetFieldOffset(TargetField);
+        var offset = Instance.TypeInfo.GenericTypeArgument!.GetFieldOffset(TargetField);
         Instance.Compile(cc);
         cc.AddInstruction(X86Instructions.Pop(X86Register.esi));
         var fieldOffset = Offset.Create(X86Register.esi, offset);
         return fieldOffset;
+    }
+
+    public override bool TryGetContainingExpression(int line, int column, out TypedExpression? containingExpression)
+    {
+        if (Instance.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        return base.TryGetContainingExpression(line, column, out containingExpression);
     }
 }

@@ -26,7 +26,12 @@ public class TypedLocalVariableExpression : TypedExpression
             var offset = cc.GetIdentifierOffset(Identifier);
             cc.AddInstruction(X86Instructions.Pop(X86Register.eax));
             cc.AddInstruction(X86Instructions.Mov(offset, X86Register.eax));
-        }
-        
+        }        
+    }
+
+    public override bool TryGetContainingExpression(int line, int column, out TypedExpression? containingExpression)
+    {
+        if (Initializer?.TryGetContainingExpression(line, column, out containingExpression) == true) return true;
+        return base.TryGetContainingExpression(line, column, out containingExpression);
     }
 }

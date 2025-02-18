@@ -49,7 +49,11 @@ public class GenericTypeDefinition : StatementBase
         var instantiatedTypeName = $"{TypeName.Lexeme}!{string.Join('_', typeArguments.Select(x => x.GetFlattenedName()))}";
         var instantiatedTypeNameToken = new Token(TypeName.Type, instantiatedTypeName, TypeName.Start, TypeName.End);
 
-        return new TypeDefinition(instantiatedTypeNameToken, newFields);
+        return new TypeDefinition(instantiatedTypeNameToken, newFields)
+        {
+            StartToken = StartToken,
+            EndToken = EndToken,
+        };
     }
 
     public override void GatherSignature(ITypeResolver typeResolver)

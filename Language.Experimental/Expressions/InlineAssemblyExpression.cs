@@ -21,6 +21,6 @@ public class InlineAssemblyExpression : ExpressionBase
 
     public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
     {
-        return new InlineAssemblyExpression(Token, AssemblyInstruction);
+        return new InlineAssemblyExpression(Token, AssemblyInstruction).CopyStartAndEndTokens(this);
     }
 }

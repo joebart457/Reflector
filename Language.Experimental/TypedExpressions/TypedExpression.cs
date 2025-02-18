@@ -17,4 +17,17 @@ public abstract class TypedExpression
     }
 
     public abstract void Compile(X86CompilationContext cc);
+
+    public bool Contains(int line, int column) => OriginalExpression.Contains(line, column);
+
+    public virtual bool TryGetContainingExpression(int line, int column, out TypedExpression? containingExpression)
+    {
+        if (Contains(line, column))
+        {
+            containingExpression = this;
+            return true;
+        }
+        containingExpression = null;
+        return false;
+    }
 }

@@ -6,9 +6,6 @@ using TokenizerCore.Interfaces;
 
 namespace Language.Experimental.Api;
 
-
-
-
 public class ExpressionContext
 {
     public TypedExpression Expression { get; set; }
@@ -21,12 +18,12 @@ public class ExpressionContext
     public ILocation Start => Expression.OriginalExpression.StartToken.Start;
     public ILocation End => Expression.OriginalExpression.EndToken.End;
 
-    public bool Contains(int line, int column)
+    public bool TryGetContainingExpression(int line, int column, out TypedExpression? containingExpression)
     {
-        if (line == Start.Line) return Start.Column <= column;
-        if (line == End.Line) return End.Column >= column;
-        return Start.Line <= line && End.Line >= line;
+        if (Expression.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        return false;       
     }
+
 }
 
 public class FunctionContext
@@ -55,7 +52,7 @@ public class FunctionContext
         foreach(var expression in FunctionDefinition.BodyStatements)
         {
             var expressionContext = new ExpressionContext(expression, this);
-            if (expressionContext.Contains(line, column)) return expressionContext;
+            if (expressionContext.TryGetContainingExpression(line, column, out var containingExpression) && containingExpression != null) return new ExpressionContext(containingExpression, this);
         }
         return null;
     }

@@ -21,6 +21,6 @@ public class LambdaExpression : ExpressionBase
 
     public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
     {
-        return new LambdaExpression(Token, FunctionDefinition.ReplaceGenericTypeSymbols(genericToConcreteTypeMap));
+        return new LambdaExpression(Token, FunctionDefinition.ReplaceGenericTypeSymbols(genericToConcreteTypeMap)).CopyStartAndEndTokens(this);
     }
 }

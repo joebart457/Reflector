@@ -17,6 +17,6 @@ public class IdentifierExpression : ExpressionBase
 
     public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
     {
-        return new IdentifierExpression(Token);
+        return new IdentifierExpression(Token).CopyStartAndEndTokens(this);
     }
 }

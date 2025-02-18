@@ -22,4 +22,10 @@ internal class TypedCompilerIntrinsic_GetExpression : TypedExpression
         var contextOffset = Offset.Create(X86Register.esi, MemberOffset);
         cc.AddInstruction(X86Instructions.Push(contextOffset));
     }
+
+    public override bool TryGetContainingExpression(int line, int column, out TypedExpression? containingExpression)
+    {
+        if (ContextPointer.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        return base.TryGetContainingExpression(line, column, out containingExpression);
+    }
 }

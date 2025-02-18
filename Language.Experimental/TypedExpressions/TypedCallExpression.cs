@@ -48,4 +48,14 @@ public class TypedCallExpression : TypedExpression
         }
         else if (!CallTarget.TypeInfo.FunctionReturnType.Is(IntrinsicType.Void)) cc.AddInstruction(X86Instructions.Push(X86Register.eax));
     }
+
+    public override bool TryGetContainingExpression(int line, int column, out TypedExpression? containingExpression)
+    {
+        if (CallTarget.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        foreach (var argument in Arguments)
+        {
+            if (argument.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        }
+        return base.TryGetContainingExpression(line, column, out containingExpression);
+    }
 }

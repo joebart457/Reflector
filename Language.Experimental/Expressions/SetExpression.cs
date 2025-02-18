@@ -23,6 +23,13 @@ public class SetExpression : ExpressionBase
 
     public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
     {
-        return new SetExpression(Token, AssignmentTarget.ReplaceGenericTypeSymbols(genericToConcreteTypeMap), ValueToAssign.ReplaceGenericTypeSymbols(genericToConcreteTypeMap));
+        return new SetExpression(Token, AssignmentTarget.ReplaceGenericTypeSymbols(genericToConcreteTypeMap), ValueToAssign.ReplaceGenericTypeSymbols(genericToConcreteTypeMap)).CopyStartAndEndTokens(this);
+    }
+
+    public override bool TryGetContainingExpression(int line, int column, out ExpressionBase? containingExpression)
+    {
+        if (AssignmentTarget.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        if (ValueToAssign.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        return base.TryGetContainingExpression(line, column, out containingExpression);
     }
 }

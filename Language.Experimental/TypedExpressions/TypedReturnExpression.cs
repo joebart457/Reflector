@@ -44,4 +44,10 @@ public class TypedReturnExpression : TypedExpression
         }
         else throw new NotImplementedException($"support for calling convention {cc.CurrentFunction.CallingConvention} has not been implemented");
     }
+
+    public override bool TryGetContainingExpression(int line, int column, out TypedExpression? containingExpression)
+    {
+        if (ReturnValue?.TryGetContainingExpression(line, column, out containingExpression) == true) return true;
+        return base.TryGetContainingExpression(line, column, out containingExpression);
+    }
 }

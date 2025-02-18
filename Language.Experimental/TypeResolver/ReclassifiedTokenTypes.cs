@@ -9,4 +9,5 @@ public static class ReclassifiedTokenTypes
     public const string Parameter = "Parameter";
     public const string Function = "Function";
     public const string ImportedFunction = "ImportedFunction";
+    public const string TypeField = "TypeField";
 }

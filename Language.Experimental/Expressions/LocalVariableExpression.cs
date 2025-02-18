@@ -24,6 +24,12 @@ public class LocalVariableExpression : ExpressionBase
 
     public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
     {
-        return new LocalVariableExpression(Token, TypeSymbol.ReplaceGenericTypeParameter(genericToConcreteTypeMap), Identifier, Initializer?.ReplaceGenericTypeSymbols(genericToConcreteTypeMap));
+        return new LocalVariableExpression(Token, TypeSymbol.ReplaceGenericTypeParameter(genericToConcreteTypeMap), Identifier, Initializer?.ReplaceGenericTypeSymbols(genericToConcreteTypeMap)).CopyStartAndEndTokens(this);
+    }
+
+    public override bool TryGetContainingExpression(int line, int column, out ExpressionBase? containingExpression)
+    {
+        if (Initializer?.TryGetContainingExpression(line, column, out containingExpression) == true) return true;
+        return base.TryGetContainingExpression(line, column, out containingExpression);
     }
 }

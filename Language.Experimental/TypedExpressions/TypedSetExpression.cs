@@ -38,5 +38,12 @@ namespace Language.Experimental.TypedExpressions
             List<X86Register> volatileRegisters = [X86Register.eax, X86Register.ebx, X86Register.ecx, X86Register.edx];
             return volatileRegisters.First(x => x != register);
         }
+
+        public override bool TryGetContainingExpression(int line, int column, out TypedExpression? containingExpression)
+        {
+            if (AssignmentTarget.TryGetContainingExpression(line, column, out containingExpression)) return true;
+            if (ValueToAssign.TryGetContainingExpression(line, column, out containingExpression)) return true;
+            return base.TryGetContainingExpression(line, column, out containingExpression);
+        }
     }
 }

@@ -21,6 +21,6 @@ public class LiteralExpression : ExpressionBase
 
     public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
     {
-        return new LiteralExpression(Token, Value);
+        return new LiteralExpression(Token, Value).CopyStartAndEndTokens(this);
     }
 }

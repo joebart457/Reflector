@@ -11,7 +11,7 @@
 	  <SelfContained>true</SelfContained>
 	  <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-	  <Version>0.2.26</Version>
+	  <Version>0.2.42</Version>
 	  <Title>Language.Experimental</Title>
 	  <Authors>Jimmy</Authors>
 	  <Description>Core package for interacting with the Language</Description>

@@ -48,8 +48,8 @@ public class TypeInfo
     public virtual TypeInfo FunctionReturnType => throw new InvalidOperationException("type is not a function pointer");
     public virtual List<TypeInfo> FunctionParameterTypes => throw new InvalidOperationException("type is not a function pointer and does not contain parameters");
     public virtual CallingConvention CallingConvention => throw new InvalidOperationException($"unable to determine calling convention of {IntrinsicType}");
-    public virtual int GetFieldOffset(IToken fieldName) => throw new InvalidOperationException($"type is not a struct type and does not contain any members");
-    public virtual TypeInfo GetFieldType(IToken fieldName) => throw new InvalidOperationException($"type is not a struct type and does not contain any members");
+    public virtual int GetFieldOffset(IToken fieldName) => throw new ParsingException(fieldName, $"type is not a struct type and does not contain any members");
+    public virtual TypeInfo GetFieldType(IToken fieldName) => throw new ParsingException(fieldName, $"type is not a struct type and does not contain any members");
     public override int GetHashCode()
     {
         return IntrinsicType.GetHashCode();

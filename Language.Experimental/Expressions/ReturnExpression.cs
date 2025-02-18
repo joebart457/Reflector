@@ -20,6 +20,12 @@ public class ReturnExpression : ExpressionBase
 
     public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
     {
-        return new ReturnExpression(Token, ReturnValue?.ReplaceGenericTypeSymbols(genericToConcreteTypeMap));
+        return new ReturnExpression(Token, ReturnValue?.ReplaceGenericTypeSymbols(genericToConcreteTypeMap)).CopyStartAndEndTokens(this);
+    }
+
+    public override bool TryGetContainingExpression(int line, int column, out ExpressionBase? containingExpression)
+    {
+        if (ReturnValue?.TryGetContainingExpression(line, column, out containingExpression) == true) return true;
+        return base.TryGetContainingExpression(line, column, out containingExpression);
     }
 }

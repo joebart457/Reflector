@@ -18,11 +18,12 @@ public class GenericFunctionReferenceExpression : ExpressionBase
 
     public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
     {
-        return new GenericFunctionReferenceExpression(Identifier, TypeArguments.Select(x => x.ReplaceGenericTypeParameter(genericToConcreteTypeMap)).ToList());
+        return new GenericFunctionReferenceExpression(Identifier, TypeArguments.Select(x => x.ReplaceGenericTypeParameter(genericToConcreteTypeMap)).ToList()).CopyStartAndEndTokens(this);
     }
 
     public override TypedExpression Resolve(ITypeResolver typeResolver)
     {
         return typeResolver.Resolve(this);
     }
+
 }

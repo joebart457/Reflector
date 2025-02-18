@@ -23,6 +23,12 @@ public class CompilerIntrinsic_GetExpression : ExpressionBase
     }
     public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
     {
-        return new CompilerIntrinsic_GetExpression(Token, RetrievedType.ReplaceGenericTypeParameter(genericToConcreteTypeMap), ContextPointer.ReplaceGenericTypeSymbols(genericToConcreteTypeMap), MemberOffset);
+        return new CompilerIntrinsic_GetExpression(Token, RetrievedType.ReplaceGenericTypeParameter(genericToConcreteTypeMap), ContextPointer.ReplaceGenericTypeSymbols(genericToConcreteTypeMap), MemberOffset).CopyStartAndEndTokens(this);
+    }
+
+    public override bool TryGetContainingExpression(int line, int column, out ExpressionBase? containingExpression)
+    {
+        if (ContextPointer.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        return base.TryGetContainingExpression(line, column, out containingExpression);
     }
 }

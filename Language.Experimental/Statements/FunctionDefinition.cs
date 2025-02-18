@@ -65,7 +65,12 @@ public class FunctionDefinition : StatementBase
         var returnType = ReturnType.ReplaceGenericTypeParameter(genericToConcreteTypeMap);
         var parameters = Parameters.Select(x => new Parameter(x.Name, x.TypeSymbol.ReplaceGenericTypeParameter(genericToConcreteTypeMap))).ToList();
         var bodyStatements = BodyStatements.Select(x => x.ReplaceGenericTypeSymbols(genericToConcreteTypeMap)).ToList();
-        return new FunctionDefinition(FunctionName, returnType, parameters, bodyStatements, CallingConvention, IsExported, ExportedSymbol);
+
+        return new FunctionDefinition(FunctionName, returnType, parameters, bodyStatements, CallingConvention, IsExported, ExportedSymbol)
+        {
+            StartToken = StartToken,
+            EndToken = EndToken,
+        };
     }
 
 }

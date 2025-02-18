@@ -41,4 +41,5 @@ public class TypedLiteralExpression : TypedExpression
             throw new NotImplementedException($"literals are not implemented for type {Value.GetType()}");
         }
     }
+
 }

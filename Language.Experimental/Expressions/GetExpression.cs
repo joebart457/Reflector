@@ -24,6 +24,12 @@ public class GetExpression : ExpressionBase
 
     public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
     {
-        return new GetExpression(Token, Instance.ReplaceGenericTypeSymbols(genericToConcreteTypeMap), TargetField, ShortCircuitOnNull);
+        return new GetExpression(Token, Instance.ReplaceGenericTypeSymbols(genericToConcreteTypeMap), TargetField, ShortCircuitOnNull).CopyStartAndEndTokens(this);
+    }
+
+    public override bool TryGetContainingExpression(int line, int column, out ExpressionBase? containingExpression)
+    {
+        if (Instance.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        return base.TryGetContainingExpression(line, column, out containingExpression);
     }
 }

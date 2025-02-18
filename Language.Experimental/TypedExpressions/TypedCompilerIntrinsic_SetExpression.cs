@@ -28,4 +28,11 @@ public class TypedCompilerIntrinsic_SetExpression : TypedExpression
         cc.AddInstruction(X86Instructions.Mov(contextOffset, X86Register.eax));
         cc.AddInstruction(X86Instructions.Push(X86Register.eax));
     }
+
+    public override bool TryGetContainingExpression(int line, int column, out TypedExpression? containingExpression)
+    {
+        if (ContextPointer.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        if (ValueToAssign.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        return base.TryGetContainingExpression(line, column, out containingExpression);
+    }
 }

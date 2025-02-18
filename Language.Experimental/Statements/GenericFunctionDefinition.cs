@@ -69,7 +69,11 @@ public class GenericFunctionDefinition : StatementBase
 
         var returnType = ReturnType.ReplaceGenericTypeParameter(genericToConcreteTypeMap);
 
-        return new FunctionDefinition(instantiatedFunctionNameToken, returnType, newParameters, newBodyStatements, CallingConvention, IsExported, instantiatedFunctionNameToken);
+        return new FunctionDefinition(instantiatedFunctionNameToken, returnType, newParameters, newBodyStatements, CallingConvention, IsExported, instantiatedFunctionNameToken)
+        {
+            StartToken = StartToken,
+            EndToken = EndToken,
+        };
 
     }
 

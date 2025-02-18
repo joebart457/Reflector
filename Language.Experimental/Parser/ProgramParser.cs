@@ -909,40 +909,47 @@ public class ProgramParser : TokenParser
 
     private ExpressionBase ParseGet()
     {
-
+        var start = Current();
         var expr = ParsePrimary();
-        if (expr is IdentifierExpression identifierExpression)
+        var end = Previous();
+        expr.StartToken = start;
+        expr.EndToken = end;
+        if (expr is IdentifierExpression identifierExpression && AdvanceIfMatch(TokenTypes.LBracket))
         {
-            while (Match(TokenTypes.Dot) || Match(TokenTypes.NullDot) || Match(TokenTypes.LBracket))
+            var typeArguments = new List<TypeSymbol>();
+            if (!AdvanceIfMatch(TokenTypes.RBracket))
+            {
+                do
+                {
+                    typeArguments.Add(ParseTypeSymbol());
+                } while (AdvanceIfMatch(TokenTypes.Comma));
+                Consume(TokenTypes.RBracket, "expect enclosing ] after type arguments list");
+            }
+            // return here, no chaining allowed
+            return new GenericFunctionReferenceExpression(identifierExpression.Token, typeArguments);
+        }
+
+        if (expr is IdentifierExpression || expr is GetExpression)
+        {
+            while (Match(TokenTypes.Dot) || Match(TokenTypes.NullDot))
             {
                 if (AdvanceIfMatch(TokenTypes.Dot))
                 {
                     var targetField = Consume(BuiltinTokenTypes.Word, "expect member name after '.'");
                     expr = new GetExpression(Previous(), expr, targetField, false);
-                }
-                else if (AdvanceIfMatch(TokenTypes.LBracket))
-                {
-                    var typeArguments = new List<TypeSymbol>();
-                    if (!AdvanceIfMatch(TokenTypes.RBracket))
-                    {
-                        do
-                        {
-                            typeArguments.Add(ParseTypeSymbol());
-                        } while (AdvanceIfMatch(TokenTypes.Comma));
-                        Consume(TokenTypes.RBracket, "expect enclosing ] after type arguments list");
-                    }
-                    // return here, no chaining allowed
-                    return new GenericFunctionReferenceExpression(identifierExpression.Token, typeArguments);
+                    expr.StartToken = start;
+                    expr.EndToken = targetField;
                 }
                 else
                 {
                     Advance();
                     var targetField = Consume(BuiltinTokenTypes.Word, "expect member name after '?.'");
                     expr = new GetExpression(Previous(), expr, targetField, true);
+                    expr.StartToken = start;
+                    expr.EndToken = targetField;
                 }
             }
         }
-
 
         return expr;
     }

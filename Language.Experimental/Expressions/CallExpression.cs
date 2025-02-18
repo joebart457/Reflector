@@ -22,6 +22,16 @@ public class CallExpression : ExpressionBase
 
     public override ExpressionBase ReplaceGenericTypeSymbols(Dictionary<GenericTypeSymbol, TypeSymbol> genericToConcreteTypeMap)
     {
-        return new CallExpression(Token, CallTarget.ReplaceGenericTypeSymbols(genericToConcreteTypeMap), Arguments.Select(x => x.ReplaceGenericTypeSymbols(genericToConcreteTypeMap)).ToList());
+        return new CallExpression(Token, CallTarget.ReplaceGenericTypeSymbols(genericToConcreteTypeMap), Arguments.Select(x => x.ReplaceGenericTypeSymbols(genericToConcreteTypeMap)).ToList()).CopyStartAndEndTokens(this);
+    }
+
+    public override bool TryGetContainingExpression(int line, int column, out ExpressionBase? containingExpression)
+    {
+        if (CallTarget.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        foreach(var argument in Arguments)
+        {
+            if (argument.TryGetContainingExpression(line, column, out containingExpression)) return true;
+        }
+        return base.TryGetContainingExpression(line, column, out containingExpression);
     }
 }
