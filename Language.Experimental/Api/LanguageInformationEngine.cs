@@ -60,8 +60,8 @@ public class LanguageInformationEngine : TypeResolver.TypeResolver
             if (RunWithTryCatch(() => (TypedFunctionDefinition)statement.Resolve(this), out var resolved))
                 _programContext.FunctionDefinitions.Add(resolved!);
         }
-        foreach(var kv in _genericTypeDefinitions)
-            _programContext.GenericTypeDefinitions[kv.Value.TypeName] = kv.Value;
+        _programContext.GenericTypeDefinitions.AddRange(_genericTypeDefinitions.Values);
+        _programContext.GenericFunctionDefinitions.AddRange(_genericFunctionDefinitions.Values);
         _programContext.FunctionDefinitions.AddRange(_lambdaFunctions);
         _programContext.FunctionDefinitions.Reverse();
     }
@@ -304,7 +304,7 @@ public class LanguageInformationEngine : TypeResolver.TypeResolver
                         _programContext.AddValidationError(new ParsingException(args[i].OriginalExpression.Token, $"call {directCallTarget.FunctionName.Lexeme}: expected argument to be of type {directCallTarget.Parameters[i].TypeInfo} but got {args[i].TypeInfo}"));
                 }
             }
-            return new TypedDirectCallExpression(directCallTarget.ReturnType, callExpression, directCallTarget, args);
+            return new TypedDirectCallExpression(directCallTarget.ReturnType, callExpression, callExpression.CallTarget.Token, directCallTarget, args);
         }
 
         TypedExpression callTarget = callExpression.CallTarget.Resolve(this);

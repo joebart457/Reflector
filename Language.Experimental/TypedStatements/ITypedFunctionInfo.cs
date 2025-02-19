@@ -15,4 +15,5 @@ public interface ITypedFunctionInfo
     public bool IsExported { get; }
     public IToken ExportedSymbol { get; }
     public string GetDecoratedFunctionIdentifier();
+    public FunctionPtrTypeInfo GetFunctionPointerType();
 }

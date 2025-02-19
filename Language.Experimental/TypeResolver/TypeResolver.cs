@@ -296,7 +296,7 @@ public class TypeResolver : ITypeResolver
                 if (!directCallTarget.Parameters[i].TypeInfo.Equals(args[i].TypeInfo))
                     throw new ParsingException(args[i].OriginalExpression.Token, $"call {directCallTarget.FunctionName.Lexeme}: expected argument to be of type {directCallTarget.Parameters[i].TypeInfo} but got {args[i].TypeInfo}");
             }
-            return new TypedDirectCallExpression(directCallTarget.ReturnType, callExpression, directCallTarget, args);
+            return new TypedDirectCallExpression(directCallTarget.ReturnType, callExpression, callExpression.CallTarget.Token, directCallTarget, args);
         }
 
         TypedExpression callTarget = callExpression.CallTarget.Resolve(this);
