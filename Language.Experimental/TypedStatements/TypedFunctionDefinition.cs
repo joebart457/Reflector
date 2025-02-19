@@ -95,7 +95,6 @@ public class TypedFunctionDefinition: TypedStatement, ITypedFunctionInfo
     public override void Compile(X86CompilationContext cc)
     {
         cc.EnterFunction(this);
-        cc.AddInstruction(X86Instructions.Label(GetDecoratedFunctionIdentifier()));
         cc.AddInstruction(X86Instructions.Push(X86Register.ebp));
         cc.AddInstruction(X86Instructions.Mov(X86Register.ebp, X86Register.esp));
         cc.AddInstruction(X86Instructions.Sub(X86Register.esp, cc.CurrentFunction.LocalVariables.Sum(x => x.TypeInfo.StackSize()) + 4)); // +4 for stack frame

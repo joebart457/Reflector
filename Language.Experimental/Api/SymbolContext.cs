@@ -2,6 +2,7 @@
 using Language.Experimental.TypedExpressions;
 using Language.Experimental.TypedStatements;
 using ParserLite.Exceptions;
+using System.Diagnostics.CodeAnalysis;
 using TokenizerCore.Interfaces;
 
 namespace Language.Experimental.Api;
@@ -64,12 +65,28 @@ public class FunctionContext
 
 public class ProgramContext
 {
+    private class TokenEqualityComparer : EqualityComparer<IToken>
+    {
+        public override bool Equals(IToken? x, IToken? y)
+        {
+            if (ReferenceEquals(x, y)) return true;
+            if (ReferenceEquals(x, null)) return false;
+            if (ReferenceEquals (y, null)) return false;
+            return x.Lexeme == y.Lexeme && x.Type == y.Type;
+        }
+
+        public override int GetHashCode([DisallowNull] IToken obj)
+        {
+            return obj.Lexeme.GetHashCode();
+        }
+    }
     public List<TypedFunctionDefinition> FunctionDefinitions { get; set; } = new();
     public List<TypedImportedFunctionDefinition> ImportedFunctionDefinitions { get; set; } = new();
     public List<TypedImportLibraryDefinition> ImportLibraryDefinitions { get; set; } = new();
     public List<StructTypeInfo> UserDefinedTypes { get; set; } = new();
     public List<(IToken, string)> ValidationErrors { get; set; } = new();
     public List<IToken> Tokens { get; set; } = new();
+    public Dictionary<IToken, List<IToken>> References { get; set; } = new(new TokenEqualityComparer());
     public FunctionContext? GetFunctionContext(int line, int column)
     {
         FunctionContext? match = null;

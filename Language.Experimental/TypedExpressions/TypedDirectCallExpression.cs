@@ -28,10 +28,10 @@ public class TypedDirectCallExpression : TypedExpression
         }
         if (CallTarget.IsImported)
         {
-            cc.AddInstruction(X86Instructions.Call(CallTarget.FunctionName.Lexeme, true));
+            cc.AddInstruction(X86Instructions.Call(CallTarget.GetDecoratedFunctionIdentifier(), true));
         }else
         {
-            cc.AddInstruction(X86Instructions.Call(CallTarget.FunctionName.Lexeme, false));
+            cc.AddInstruction(X86Instructions.Call(CallTarget.GetDecoratedFunctionIdentifier(), false));
         }
 
         if (CallTarget.CallingConvention == CallingConvention.Cdecl) cc.AddInstruction(X86Instructions.Add(X86Register.esp, Arguments.Count * 4));

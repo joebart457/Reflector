@@ -55,7 +55,7 @@ public class X86CompilationContext
     {
         var foundLibrary = ImportLibraries.Find(x => x.LibraryAlias.Lexeme == importedFunction.LibraryAlias.Lexeme);
         if (foundLibrary == null) throw new Exception($"import library with alias {importedFunction.LibraryAlias} is not defined");
-        foundLibrary.AddImportedFunction(importedFunction.FunctionName, importedFunction.FunctionSymbol);
+        foundLibrary.AddImportedFunction(importedFunction.GetDecoratedFunctionIdentifier(), importedFunction.FunctionSymbol);
     }
 
     public void AddImportLibrary(TypedImportLibraryDefinition library)
@@ -233,8 +233,8 @@ public class X86CompilationContext
         public class ImportedFunction
         {
             public IToken Symbol { get; set; }
-            public IToken FunctionIdentifier { get; set; }
-            public ImportedFunction(IToken symbol, IToken functionIdentifier)
+            public string FunctionIdentifier { get; set; }
+            public ImportedFunction(IToken symbol, string functionIdentifier)
             {
                 Symbol = symbol;
                 FunctionIdentifier = functionIdentifier;
@@ -249,9 +249,9 @@ public class X86CompilationContext
             LibraryAlias = libraryAlias;
         }
 
-        public void AddImportedFunction(IToken functionIdentifier, IToken symbol)
+        public void AddImportedFunction(string functionIdentifier, IToken symbol)
         {
-            if (ImportedFunctions.Any(x => x.FunctionIdentifier.Lexeme == functionIdentifier.Lexeme))
+            if (ImportedFunctions.Any(x => x.FunctionIdentifier == functionIdentifier))
                 throw new Exception($"symbol with name {functionIdentifier} is already imported");
             ImportedFunctions.Add(new(symbol, functionIdentifier));
         }

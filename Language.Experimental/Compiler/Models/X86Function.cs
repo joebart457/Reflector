@@ -32,7 +32,7 @@ public class X86Function
     public string Emit(int indentLevel)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"{OriginalDeclaration.FunctionName.Lexeme}:".Indent(indentLevel + 1));
+        sb.AppendLine($"{OriginalDeclaration.GetDecoratedFunctionIdentifier()}:".Indent(indentLevel + 1));
         foreach (var instruction in Instructions)
         {
             sb.AppendLine(instruction.Emit().Indent(indentLevel + 2));

@@ -18,7 +18,8 @@ public class StartupService
         [Option("sourceComments", "sc", "if enabled, generated assembly will contain source comments")] bool sourceComments = false,
         [Option("enableInMemoryCompilation", "m", "if enabled, assembly will happen in memory, and no assembly file will be generated")] bool enableInMemoryCompilation = false,
         [Option("compilationMemoryBuffer", "mb", "size of memory in bytes the compiler will use for assembly")] int compilationMemoryBuffer = 100000,
-        [Option("assemblyPasses", "na", "number of passes the assembler is allowed to use when attempting to generate final binary")] int assemblyPasses = 100)
+        [Option("assemblyPasses", "na", "number of passes the assembler is allowed to use when attempting to generate final binary")] int assemblyPasses = 100,
+        [Option("logSuccess", "q", "if enabled, a message will show upon successful compilation of source file")] bool logSuccess = false)
     {
         var outputTarget = OutputTarget.Exe;
         if (!string.IsNullOrWhiteSpace(target))
@@ -36,6 +37,7 @@ public class StartupService
             EnableOptimizations = enableOptimizations,
             OptimizationPasses = numberOfPasses,
             SourceComments = sourceComments,
+            LogSuccess = logSuccess,
             AssemblerOptions = new()
             {
                 EnableInMemoryAssembly = enableInMemoryCompilation,
@@ -52,6 +54,8 @@ public class StartupService
             CliLogger.LogError(result);
             return -1;
         }
+        if (compilationOptions.LogSuccess)
+            CliLogger.LogSuccess($"{inputPath} -> {compilationOptions.OutputPath}");
         return 0;
     }
 

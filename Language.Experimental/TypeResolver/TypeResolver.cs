@@ -86,29 +86,31 @@ public class TypeResolver : ITypeResolver
         }
     }
 
-    public void GatherSignature(TypeDefinition typeDefinition)
+    public virtual void GatherSignature(TypeDefinition typeDefinition)
     {
         var typeSymbol = new TypeSymbol(typeDefinition.TypeName, new());
         if (_resolvedTypes.ContainsKey(typeSymbol))
             throw new ParsingException(typeDefinition.TypeName, $"redefinition of named type {typeDefinition.TypeName.Lexeme}");
+        ReclassifyToken(typeDefinition.TypeName, ReclassifiedTokenTypes.Type);
         _resolvedTypes[typeSymbol] = new StructTypeInfo(typeDefinition.TypeName, new());
     }
 
-    public void GatherSignature(GenericTypeDefinition genericTypeDefinition)
+    public virtual void GatherSignature(GenericTypeDefinition genericTypeDefinition)
     {
         if (_genericTypeDefinitions.ContainsKey(genericTypeDefinition.TypeName.Lexeme))
             throw new ParsingException(genericTypeDefinition.TypeName, $"redefinition of named generic type {genericTypeDefinition.TypeName.Lexeme}");
+        ReclassifyToken(genericTypeDefinition.TypeName, ReclassifiedTokenTypes.Type);
         _genericTypeDefinitions[genericTypeDefinition.TypeName.Lexeme] = genericTypeDefinition;
     }
 
-    public void GatherSignature(GenericFunctionDefinition genericFunctionDefinition)
+    public virtual void GatherSignature(GenericFunctionDefinition genericFunctionDefinition)
     {
         if (_genericFunctionDefinitions.ContainsKey(genericFunctionDefinition.FunctionName.Lexeme))
             throw new ParsingException(genericFunctionDefinition.FunctionName, $"redefinition of named generic function {genericFunctionDefinition.FunctionName.Lexeme}");
         _genericFunctionDefinitions[genericFunctionDefinition.FunctionName.Lexeme] = genericFunctionDefinition;
     }
 
-    public void GatherSignature(FunctionDefinition functionDefinition)
+    public virtual void GatherSignature(FunctionDefinition functionDefinition)
     {
         if (functionDefinition.Parameters.DistinctBy(x => x.Name.Lexeme).Count() != functionDefinition.Parameters.Count)
             throw new ParsingException(functionDefinition.FunctionName, $"redefinition of parameter name");
@@ -125,10 +127,10 @@ public class TypeResolver : ITypeResolver
         if (_importedFunctionDefinitions.ContainsKey(functionDefinition.FunctionName.Lexeme))
             throw new ParsingException(functionDefinition.FunctionName, $"redefinition of symbol {functionDefinition.FunctionName.Lexeme}");
 
-        _functionDefinitions[functionDefinition.FunctionName.Lexeme] = new TypedFunctionDefinition(functionDefinition, functionDefinition.FunctionName, Resolve(functionDefinition.ReturnType), resolvedParameters, functionBody);
+        _functionDefinitions[functionDefinition.FunctionName.Lexeme] = new TypedFunctionDefinition(functionDefinition, ReclassifyToken(functionDefinition.FunctionName, ReclassifiedTokenTypes.Function), Resolve(functionDefinition.ReturnType), resolvedParameters, functionBody);
     }
 
-    public void GatherSignature(ImportedFunctionDefinition importedFunctionDefinition)
+    public virtual void GatherSignature(ImportedFunctionDefinition importedFunctionDefinition)
     {
         if (importedFunctionDefinition.Parameters.DistinctBy(x => x.Name.Lexeme).Count() != importedFunctionDefinition.Parameters.Count)
             throw new ParsingException(importedFunctionDefinition.FunctionName, $"redefinition of parameter name");
@@ -148,10 +150,10 @@ public class TypeResolver : ITypeResolver
         if (!_importLibraries.ContainsKey(importedFunctionDefinition.LibraryAlias.Lexeme))
             throw new ParsingException(importedFunctionDefinition.LibraryAlias, $"unable to import function from undefined library '{importedFunctionDefinition.LibraryAlias.Lexeme}'");
 
-        _importedFunctionDefinitions[importedFunctionDefinition.FunctionName.Lexeme] = new TypedImportedFunctionDefinition(importedFunctionDefinition, importedFunctionDefinition.FunctionName, returnType, resolvedParameters, importedFunctionDefinition.CallingConvention, importedFunctionDefinition.LibraryAlias, importedFunctionDefinition.FunctionSymbol);
+        _importedFunctionDefinitions[importedFunctionDefinition.FunctionName.Lexeme] = new TypedImportedFunctionDefinition(importedFunctionDefinition, ReclassifyToken(importedFunctionDefinition.FunctionName, ReclassifiedTokenTypes.ImportedFunction), returnType, resolvedParameters, importedFunctionDefinition.CallingConvention, importedFunctionDefinition.LibraryAlias, importedFunctionDefinition.FunctionSymbol);
     }
 
-    public void GatherSignature(ImportLibraryDefinition importLibraryDefinition)
+    public virtual void GatherSignature(ImportLibraryDefinition importLibraryDefinition)
     {
         if (_importLibraries.ContainsKey(importLibraryDefinition.LibraryAlias.Lexeme))
             throw new ParsingException(importLibraryDefinition.LibraryAlias, $"import library with alias {importLibraryDefinition.LibraryAlias.Lexeme} is already defined");
@@ -178,7 +180,7 @@ public class TypeResolver : ITypeResolver
         return foundType;
     }
 
-    internal TypeInfo Resolve(TypeSymbol typeSymbol)
+    internal virtual TypeInfo Resolve(TypeSymbol typeSymbol)
     {
         if (typeSymbol.IsGenericTypeSymbol)
             throw new ParsingException(typeSymbol.TypeName, $"unable to resolve generic type parameter {typeSymbol} to a concrete type");
@@ -354,12 +356,12 @@ public class TypeResolver : ITypeResolver
             if (_functionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var functionWithMatchingName))
             {
                 ReclassifyToken(identifierExpression.Token, ReclassifiedTokenTypes.Function);
-                return new TypedFunctionPointerExpression(functionWithMatchingName.GetFunctionPointerType(), identifierExpression, functionWithMatchingName.FunctionName, false); // identifiers only reference the function address so they can be used as lambdas
+                return new TypedFunctionPointerExpression(functionWithMatchingName.GetFunctionPointerType(), identifierExpression, functionWithMatchingName); // identifiers only reference the function address so they can be used as lambdas
             }
             if (_importedFunctionDefinitions.TryGetValue(identifierExpression.Token.Lexeme, out var importedFunctionWithMatchingName))
             {
                 ReclassifyToken(identifierExpression.Token, ReclassifiedTokenTypes.ImportedFunction);
-                return new TypedFunctionPointerExpression(importedFunctionWithMatchingName.GetFunctionPointerType(), identifierExpression, importedFunctionWithMatchingName.FunctionName, true);
+                return new TypedFunctionPointerExpression(importedFunctionWithMatchingName.GetFunctionPointerType(), identifierExpression, importedFunctionWithMatchingName);
             }
         }
         if (foundType == null)
@@ -368,7 +370,7 @@ public class TypeResolver : ITypeResolver
         return new TypedIdentifierExpression(foundType, identifierExpression, identifierExpression.Token);
     }
 
-    internal ITypedFunctionInfo? ResolveCallTarget(IdentifierExpression identifierExpression)
+    internal virtual ITypedFunctionInfo? ResolveCallTarget(IdentifierExpression identifierExpression)
     {
         // Identifiers that are direct call targets will be handled differently IE
         // (printf msg) 
@@ -386,7 +388,7 @@ public class TypeResolver : ITypeResolver
         return null;
     }
 
-    internal ITypedFunctionInfo ResolveCallTarget(GenericFunctionReferenceExpression genericFunctionReferenceExpression, List<TypedExpression> arguments)
+    internal virtual ITypedFunctionInfo ResolveCallTarget(GenericFunctionReferenceExpression genericFunctionReferenceExpression, List<TypedExpression> arguments)
     {
         if (genericFunctionReferenceExpression.TypeArguments.Count == 0)
         {
@@ -423,7 +425,7 @@ public class TypeResolver : ITypeResolver
         return ResolveCallTarget(genericFunctionReferenceExpression);
     }
 
-    internal ITypedFunctionInfo ResolveCallTarget(GenericFunctionReferenceExpression genericFunctionReferenceExpression)
+    internal virtual ITypedFunctionInfo ResolveCallTarget(GenericFunctionReferenceExpression genericFunctionReferenceExpression)
     {
         var symbol = $"{genericFunctionReferenceExpression.Identifier.Lexeme}!{string.Join('_', genericFunctionReferenceExpression.TypeArguments.Select(x => x.GetFlattenedName()))}";
         if (_resolvedFunctionDefinitions.TryGetValue(symbol, out var resolvedFunctionDefinition))

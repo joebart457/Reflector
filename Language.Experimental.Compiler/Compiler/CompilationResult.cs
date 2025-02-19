@@ -30,5 +30,6 @@ public class CompilationResult
         StaticPointerData = context.StaticPointerData;
         StaticUnitializedData = context.StaticUnitializedData;
         ProgramIcon = context.ProgramIcon;
+        
     }
 }

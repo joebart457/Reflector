@@ -22,6 +22,7 @@ public class CompilationOptions
     public bool EnableOptimizations { get; set; } = false;
     public int OptimizationPasses { get; set; } = 3;
     public bool SourceComments { get; set; } = false;
+    public bool LogSuccess { get; set; } = false;
     public AssemblerOptions AssemblerOptions { get; set; } = new();
 
 }

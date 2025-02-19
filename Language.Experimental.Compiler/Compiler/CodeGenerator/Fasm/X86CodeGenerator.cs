@@ -1,4 +1,5 @@
 ﻿using Language.Experimental.Extensions;
+using Logger;
 using System.Text;
 
 namespace Language.Experimental.Compiler.CodeGenerator.Fasm;
@@ -14,21 +15,26 @@ public static class X86CodeGenerator
     private static string? GenerateExecutable(CompilationResult data)
     {
         var sb = new StringBuilder();
+
         if (data.CompilationOptions.OutputTarget == OutputTarget.Exe)
         {
             sb.AppendLine("format PE console");
-            if (!string.IsNullOrWhiteSpace(data.CompilationOptions.EntryPoint))
-                sb.AppendLine($"entry {data.CompilationOptions.EntryPoint}");
-            else sb.AppendLine("entry Main");
+            if (string.IsNullOrWhiteSpace(data.CompilationOptions.EntryPoint))
+                data.CompilationOptions.EntryPoint = "Main";
         }
         else if (data.CompilationOptions.OutputTarget == OutputTarget.Dll)
         {
             sb.AppendLine("format PE DLL");
-            if (!string.IsNullOrWhiteSpace(data.CompilationOptions.EntryPoint))
-                sb.AppendLine($"entry {data.CompilationOptions.EntryPoint}");
-            else sb.AppendLine("entry DllEntryPoint");
+            if (string.IsNullOrWhiteSpace(data.CompilationOptions.EntryPoint))
+                data.CompilationOptions.EntryPoint = "DllEntryPoint";
         }
         else throw new Exception($"unable to generate code for output target {data.CompilationOptions.OutputTarget}");
+
+        var entryFunction = data.FunctionData.Find(x => x.OriginalDeclaration.FunctionName.Lexeme == data.CompilationOptions.EntryPoint);
+        if (entryFunction == null) return $"unable to find function corresponding to entry point {data.CompilationOptions.EntryPoint}";
+
+        sb.AppendLine($"entry {entryFunction.OriginalDeclaration.GetDecoratedFunctionIdentifier()}");
+
 
         // Output Resource data
         //sb.AppendLine(data.ResourceData.GenerateAssembly(data.Settings, 0));
@@ -72,51 +78,55 @@ public static class X86CodeGenerator
             sb.Append(proc.Emit(1));
         }
 
-        // Output imported functions
-        sb.AppendLine("section '.idata' import data readable writeable");
-        int libCounter = 0;
-        foreach (var importLibrary in data.ImportLibraries)
+        if (data.ImportLibraries.Any())
         {
-            sb.AppendLine($"dd !lib_{libCounter}_ilt,0,0,RVA !lib_{libCounter}_name, RVA !lib_{libCounter}_iat".Indent(1));
-            libCounter++;
-        }
-        sb.AppendLine($"dd 0,0,0,0,0".Indent(1));
-        libCounter = 0;
-        foreach (var importLibrary in data.ImportLibraries)
-        {
-            sb.AppendLine($"!lib_{libCounter}_name db '{importLibrary.LibraryPath.Lexeme}',0".Indent(1));
-            sb.AppendLine("rb RVA $ and 1".Indent(1));
-            libCounter++;
-        }
-
-        libCounter = 0;
-        foreach (var importLibrary in data.ImportLibraries)
-        {
-            sb.AppendLine("rb(-rva $) and 3".Indent(1));
-
-            sb.AppendLine($"!lib_{libCounter}_ilt:".Indent(1));
-            foreach (var importedFunction in importLibrary.ImportedFunctions)
+            // Output imported functions
+            sb.AppendLine("section '.idata' import data readable writeable");
+            int libCounter = 0;
+            foreach (var importLibrary in data.ImportLibraries)
             {
-                sb.AppendLine($"dd RVA !{importedFunction.FunctionIdentifier.Lexeme}".Indent(1));
+                sb.AppendLine($"dd !lib_{libCounter}_ilt,0,0,RVA !lib_{libCounter}_name, RVA !lib_{libCounter}_iat".Indent(1));
+                libCounter++;
             }
-            sb.AppendLine($"dd 0".Indent(1));
-
-            sb.AppendLine($"!lib_{libCounter}_iat:".Indent(1));
-            foreach (var importedFunction in importLibrary.ImportedFunctions)
+            sb.AppendLine($"dd 0,0,0,0,0".Indent(1));
+            libCounter = 0;
+            foreach (var importLibrary in data.ImportLibraries)
             {
-                sb.AppendLine($"{importedFunction.FunctionIdentifier.Lexeme} dd RVA !{importedFunction.FunctionIdentifier.Lexeme}".Indent(1));
-            }
-            sb.AppendLine($"dd 0".Indent(1));
-
-            foreach (var importedFunction in importLibrary.ImportedFunctions)
-            {
-                sb.AppendLine($"!{importedFunction.FunctionIdentifier.Lexeme} dw 0".Indent(1));
-                sb.AppendLine($"db '{importedFunction.Symbol.Lexeme}',0".Indent(1));
-                if (importedFunction != importLibrary.ImportedFunctions.Last()) sb.AppendLine("rb RVA $ and 1".Indent(1));
+                sb.AppendLine($"!lib_{libCounter}_name db '{importLibrary.LibraryPath.Lexeme}',0".Indent(1));
+                sb.AppendLine("rb RVA $ and 1".Indent(1));
+                libCounter++;
             }
 
-            libCounter++;
+            libCounter = 0;
+            foreach (var importLibrary in data.ImportLibraries)
+            {
+                sb.AppendLine("rb(-rva $) and 3".Indent(1));
+
+                sb.AppendLine($"!lib_{libCounter}_ilt:".Indent(1));
+                foreach (var importedFunction in importLibrary.ImportedFunctions)
+                {
+                    sb.AppendLine($"dd RVA !{importedFunction.FunctionIdentifier}".Indent(1));
+                }
+                sb.AppendLine($"dd 0".Indent(1));
+
+                sb.AppendLine($"!lib_{libCounter}_iat:".Indent(1));
+                foreach (var importedFunction in importLibrary.ImportedFunctions)
+                {
+                    sb.AppendLine($"{importedFunction.FunctionIdentifier} dd RVA !{importedFunction.FunctionIdentifier}".Indent(1));
+                }
+                sb.AppendLine($"dd 0".Indent(1));
+
+                foreach (var importedFunction in importLibrary.ImportedFunctions)
+                {
+                    sb.AppendLine($"!{importedFunction.FunctionIdentifier} dw 0".Indent(1));
+                    sb.AppendLine($"db '{importedFunction.Symbol.Lexeme}',0".Indent(1));
+                    if (importedFunction != importLibrary.ImportedFunctions.Last()) sb.AppendLine("rb RVA $ and 1".Indent(1));
+                }
+
+                libCounter++;
+            }
         }
+        
 
 
 
@@ -202,7 +212,8 @@ public static class X86CodeGenerator
         if (!data.CompilationOptions.AssemblerOptions.EnableInMemoryAssembly)
         {
             File.WriteAllText(data.CompilationOptions.AssemblyPath, sb.ToString());
-            //return FasmService.RunFasm(data.CompilationOptions);
+            if (data.CompilationOptions.LogSuccess)
+                CliLogger.LogSuccess($"{data.CompilationOptions.InputPath} -> {data.CompilationOptions.AssemblyPath}");
             return FasmDllService.RunFasm(data.CompilationOptions);
         }
         return FasmDllService.RunFasmInMemory(sb, data.CompilationOptions);
