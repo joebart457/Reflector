@@ -1,4 +1,5 @@
 ﻿using Language.Experimental.Models;
+using Language.Experimental.Statements;
 using Language.Experimental.TypedExpressions;
 using Language.Experimental.TypedStatements;
 using ParserLite.Exceptions;
@@ -83,6 +84,7 @@ public class ProgramContext
     public List<TypedFunctionDefinition> FunctionDefinitions { get; set; } = new();
     public List<TypedImportedFunctionDefinition> ImportedFunctionDefinitions { get; set; } = new();
     public List<TypedImportLibraryDefinition> ImportLibraryDefinitions { get; set; } = new();
+    public Dictionary<IToken, GenericTypeDefinition> GenericTypeDefinitions { get; set; } = new(new TokenEqualityComparer());
     public List<StructTypeInfo> UserDefinedTypes { get; set; } = new();
     public List<(IToken, string)> ValidationErrors { get; set; } = new();
     public List<IToken> Tokens { get; set; } = new();

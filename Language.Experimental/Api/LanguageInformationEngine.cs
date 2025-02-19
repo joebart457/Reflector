@@ -60,6 +60,8 @@ public class LanguageInformationEngine : TypeResolver.TypeResolver
             if (RunWithTryCatch(() => (TypedFunctionDefinition)statement.Resolve(this), out var resolved))
                 _programContext.FunctionDefinitions.Add(resolved!);
         }
+        foreach(var kv in _genericTypeDefinitions)
+            _programContext.GenericTypeDefinitions[kv.Value.TypeName] = kv.Value;
         _programContext.FunctionDefinitions.AddRange(_lambdaFunctions);
         _programContext.FunctionDefinitions.Reverse();
     }
@@ -206,6 +208,20 @@ public class LanguageInformationEngine : TypeResolver.TypeResolver
         ReclassifyToken(importedFunctionDefinition.FunctionName, ReclassifiedTokenTypes.ImportedFunction);
         AddReference(importedFunctionDefinition.FunctionName, importedFunctionDefinition.FunctionName);
         _importedFunctionDefinitions[importedFunctionDefinition.FunctionName.Lexeme] = new TypedImportedFunctionDefinition(importedFunctionDefinition, importedFunctionDefinition.FunctionName, returnType, resolvedParameters, importedFunctionDefinition.CallingConvention, importedFunctionDefinition.LibraryAlias, importedFunctionDefinition.FunctionSymbol);
+    }
+
+    internal override StructTypeInfo ResolveTypeDefinition(TypeDefinition typeDefinition)
+    {
+        var typeSymbol = new TypeSymbol(typeDefinition.TypeName, new());
+        if (!_resolvedTypes.TryGetValue(typeSymbol, out var foundType))
+            throw new ParsingException(typeDefinition.TypeName, $"unable to find type signature {typeSymbol}");
+
+        foreach (var field in typeDefinition.Fields)
+        {
+            foundType.Fields.Add(new(Resolve(field.TypeSymbol), field.Name));
+        }
+        foundType.ValidateFields();
+        return foundType;
     }
 
     internal override TypeInfo Resolve(TypeSymbol typeSymbol)

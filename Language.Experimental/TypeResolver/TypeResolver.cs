@@ -167,7 +167,7 @@ public class TypeResolver : ITypeResolver
         _resolvedFunctionDefinitions[typedFunctionDefinition.FunctionName.Lexeme] = typedFunctionDefinition;
     }
 
-    internal StructTypeInfo ResolveTypeDefinition(TypeDefinition typeDefinition)
+    internal virtual StructTypeInfo ResolveTypeDefinition(TypeDefinition typeDefinition)
     {
         var typeSymbol = new TypeSymbol(typeDefinition.TypeName, new());
         if (!_resolvedTypes.TryGetValue(typeSymbol, out var foundType))
