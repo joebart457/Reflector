@@ -512,7 +512,9 @@ public class ProgramParser : TokenParser
     }
     public ParsingResult ParseFile(string path, out List<ParsingException> errors)
     {
-        return ParseText(File.ReadAllText(path), out errors);
+        var result = ParseText(File.ReadAllText(path), out errors);
+        result.SourceFilePath = path;
+        return result;
     }
 
     public ParsingResult ParseText(string text, out List<ParsingException> errors)
@@ -539,6 +541,11 @@ public class ProgramParser : TokenParser
                 else if (next is GenericFunctionDefinition genericFunctionDefinition) result.GenericFunctionDefinitions.Add(genericFunctionDefinition);
                 else if (next is ImportedFunctionDefinition importedFunctionDefinition) result.ImportedFunctionDefinitions.Add(importedFunctionDefinition);
                 else if (next is ImportLibraryDefinition importLibraryDefinition) result.ImportLibraryDefinitions.Add(importLibraryDefinition);
+                else if (next is ProgramIconStatement programIconStatement)
+                {
+                    if (result.ProgramIconStatement != null) throw new ParsingException(programIconStatement.IconFilePath, $"program icon has already been set");
+                    result.ProgramIconStatement = programIconStatement;
+                }
                 else throw new ParsingException(next.Token, $"unsupported statement type {next.GetType().Name}");
             }
             catch (ParsingException e)
@@ -637,7 +644,15 @@ public class ProgramParser : TokenParser
         if (AdvanceIfMatch(TokenTypes.Import)) return ParseImportedFunctionDefinition();
         if (AdvanceIfMatch(TokenTypes.Library)) return ParseImportLibraryDefinition();
         if (AdvanceIfMatch(TokenTypes.Type)) return ParseTypeDefinition();
+        if (AdvanceIfMatch(TokenTypes.Icon)) return ParseProgramIconStatement();
         throw new ParsingException(Current(), $"unexpected token {Current()}");
+    }
+
+    public StatementBase ParseProgramIconStatement()
+    {
+        var iconFilePath = Consume(BuiltinTokenTypes.Word, "expect (icon `icon/file/path.ico`)");
+        Consume(TokenTypes.RParen, "expect enclosing ) after icon specifier");
+        return new ProgramIconStatement(iconFilePath);
     }
 
     public StatementBase ParseFunctionDefinition(bool isLambda = false)

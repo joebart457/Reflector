@@ -48,8 +48,10 @@ public class TypeResolver : ITypeResolver
         {
             result.Functions.Add((TypedFunctionDefinition)statement.Resolve(this));
         }
+        result.ProgramIcon = (TypedProgramIconStatement?)parsingResult.ProgramIconStatement?.Resolve(this);
         result.Functions.AddRange(_lambdaFunctions);
         result.Functions.AddRange(_resolvedFunctionDefinitions.Values);
+        
         return result;
     }
 
@@ -158,6 +160,11 @@ public class TypeResolver : ITypeResolver
         if (_importLibraries.ContainsKey(importLibraryDefinition.LibraryAlias.Lexeme))
             throw new ParsingException(importLibraryDefinition.LibraryAlias, $"import library with alias {importLibraryDefinition.LibraryAlias.Lexeme} is already defined");
         _importLibraries[importLibraryDefinition.LibraryAlias.Lexeme] = new TypedImportLibraryDefinition(importLibraryDefinition, importLibraryDefinition.LibraryAlias, importLibraryDefinition.LibraryPath);
+    }
+
+    public virtual TypedStatement Resolve(ProgramIconStatement programIconStatement)
+    {
+        return new TypedProgramIconStatement(programIconStatement, programIconStatement.IconFilePath);
     }
 
     internal void AddToResolvedGenericFunctions(TypedFunctionDefinition typedFunctionDefinition)
@@ -589,5 +596,10 @@ public class TypeResolver : ITypeResolver
     {
         token.Type = newClassification;
         return token;
+    }
+
+    public void GatherSignature(ProgramIconStatement programIconStatement)
+    {
+        throw new NotImplementedException();
     }
 }

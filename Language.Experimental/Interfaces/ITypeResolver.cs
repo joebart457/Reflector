@@ -1,5 +1,4 @@
 ﻿using Language.Experimental.Expressions;
-using Language.Experimental.Parser;
 using Language.Experimental.Statements;
 using Language.Experimental.TypedExpressions;
 using Language.Experimental.TypedStatements;
@@ -14,6 +13,7 @@ namespace Language.Experimental.Interfaces
         void GatherSignature(ImportedFunctionDefinition importedFunctionDefinition);
         void GatherSignature(ImportLibraryDefinition importLibraryDefinition);
         void GatherSignature(TypeDefinition typeDefinition);
+        void GatherSignature(ProgramIconStatement programIconStatement);
         TypedExpression Resolve(CallExpression callExpression);
         TypedExpression Resolve(CastExpression castExpression);
         TypedExpression Resolve(CompilerIntrinsic_GetExpression compilerIntrinsic_GetExpression);
@@ -30,5 +30,6 @@ namespace Language.Experimental.Interfaces
         TypedExpression Resolve(LocalVariableExpression localVariableExpression);
         TypedExpression Resolve(ReturnExpression returnExpression);
         TypedExpression Resolve(SetExpression setExpression);
+        TypedStatement Resolve(ProgramIconStatement programIconStatement);
     }
 }

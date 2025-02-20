@@ -1,4 +1,5 @@
-﻿using Language.Experimental.Models;
+﻿using Language.Experimental.Expressions;
+using Language.Experimental.Models;
 using Language.Experimental.Statements;
 using Language.Experimental.TypedExpressions;
 using Language.Experimental.TypedStatements;
@@ -64,6 +65,31 @@ public class FunctionContext
 
 }
 
+public class GenericFunctionContext
+{
+    public GenericFunctionDefinition FunctionDefinition { get; set; }
+    public ProgramContext ProgramContext { get; set; }
+    public GenericFunctionContext(GenericFunctionDefinition functionDefinition, ProgramContext programContext)
+    {
+        FunctionDefinition = functionDefinition;
+        ProgramContext = programContext;
+    }
+
+    public ILocation Start => FunctionDefinition.StartToken.Start;
+    public ILocation End => FunctionDefinition.EndToken.End;
+
+    public bool Contains(int line, int column)
+    {
+        if (line == Start.Line) return Start.Column <= column;
+        if (line == End.Line) return End.Column >= column;
+        return Start.Line <= line && End.Line >= line;
+    }
+
+    public Parameter? GetParameter(IToken paramterName) => FunctionDefinition.Parameters.Find(x => x.Name.Lexeme == paramterName.Lexeme);
+    public LocalVariableExpression? GetLocalVariableExpression(IToken localVariableName) => FunctionDefinition.ExtractLocalVariableExpressions().FirstOrDefault(x => x.Identifier.Lexeme == localVariableName.Lexeme);
+
+}
+
 public class ProgramContext
 {
     private class TokenEqualityComparer : EqualityComparer<IToken>
@@ -90,12 +116,29 @@ public class ProgramContext
     public List<(IToken, string)> ValidationErrors { get; set; } = new();
     public List<IToken> Tokens { get; set; } = new();
     public Dictionary<IToken, List<IToken>> References { get; set; } = new(new TokenEqualityComparer());
+    public TypedProgramIconStatement? ProgamIcon { get; set; }
     public FunctionContext? GetFunctionContext(int line, int column)
     {
         FunctionContext? match = null;
         foreach(var function in FunctionDefinitions)
         {
             var functionContext = new FunctionContext(function, this);
+            if (functionContext.Contains(line, column))
+            {
+                if (match == null) match = functionContext;
+                // search for inner most matching function
+                else if (match.Contains(functionContext.Start.Line, functionContext.Start.Column)) match = functionContext;
+            }
+        }
+        return match;
+    }
+
+    public GenericFunctionContext? GetGenericFunctionContext(int line, int column)
+    {
+        GenericFunctionContext? match = null;
+        foreach (var function in GenericFunctionDefinitions)
+        {
+            var functionContext = new GenericFunctionContext(function, this);
             if (functionContext.Contains(line, column))
             {
                 if (match == null) match = functionContext;

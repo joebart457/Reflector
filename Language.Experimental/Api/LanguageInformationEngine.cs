@@ -64,6 +64,8 @@ public class LanguageInformationEngine : TypeResolver.TypeResolver
         _programContext.GenericFunctionDefinitions.AddRange(_genericFunctionDefinitions.Values);
         _programContext.FunctionDefinitions.AddRange(_lambdaFunctions);
         _programContext.FunctionDefinitions.Reverse();
+        if (parsingResult.ProgramIconStatement != null && RunWithTryCatch(() => (TypedProgramIconStatement)parsingResult.ProgramIconStatement.Resolve(this), out var typedProgramIconStatement))
+            _programContext.ProgamIcon = typedProgramIconStatement;
     }
 
 
@@ -125,6 +127,7 @@ public class LanguageInformationEngine : TypeResolver.TypeResolver
             return false;
         }
     }
+
     public override void GatherSignature(ImportLibraryDefinition importLibraryDefinition)
     {
         if (_importLibraries.ContainsKey(importLibraryDefinition.LibraryAlias.Lexeme))

@@ -54,6 +54,8 @@ public static class Tokenizers
                     new TokenizerRule(TokenTypes.CompilerIntrinsicGet, "_ci_get"),
                     new TokenizerRule(TokenTypes.CompilerIntrinsicSet, "_ci_set"),
 
+                    new TokenizerRule(TokenTypes.Icon, "icon"),
+
                     new TokenizerRule(TokenTypes.ByteRegister, X86ByteRegister.al.ToString()),
                     new TokenizerRule(TokenTypes.ByteRegister, X86ByteRegister.bl.ToString()),
 

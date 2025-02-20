@@ -1,6 +1,7 @@
 ﻿using Language.Experimental.Expressions;
 using Language.Experimental.Interfaces;
 using Language.Experimental.Parser;
+using Language.Experimental.TypedExpressions;
 using Language.Experimental.TypedStatements;
 using ParserLite.Exceptions;
 using System.Runtime.InteropServices;
@@ -85,5 +86,41 @@ public class GenericFunctionDefinition : StatementBase
     public override TypedStatement Resolve(ITypeResolver typeResolver)
     {
         throw new NotImplementedException();
+    }
+
+    public IEnumerable<LocalVariableExpression> ExtractLocalVariableExpressions()
+    {
+        return BodyStatements.SelectMany(e => ExtractLocalVariableExpressionsHelper(e));
+    }
+
+    private List<LocalVariableExpression> ExtractLocalVariableExpressionsHelper(ExpressionBase expression)
+    {
+        var ls = new List<LocalVariableExpression>();
+        if (expression is CallExpression ce)
+        {
+            ls.AddRange(ExtractLocalVariableExpressionsHelper(ce.CallTarget));
+            foreach (var arg in ce.Arguments) ls.AddRange(ExtractLocalVariableExpressionsHelper(arg));
+        }
+        else if (expression is CompilerIntrinsic_GetExpression ci_get) ls.AddRange(ExtractLocalVariableExpressionsHelper(ci_get.ContextPointer));
+        else if (expression is CompilerIntrinsic_SetExpression ci_set) ls.AddRange(ExtractLocalVariableExpressionsHelper(ci_set.ContextPointer));
+        else if (expression is GetExpression get)
+        {
+            ls.AddRange(ExtractLocalVariableExpressionsHelper(get.Instance));
+        }
+        else if (expression is IdentifierExpression id) { }
+        else if (expression is InlineAssemblyExpression asm) { }
+        else if (expression is LiteralExpression le) { }
+        else if (expression is SetExpression tse)
+        {
+            ls.AddRange(ExtractLocalVariableExpressionsHelper(tse.AssignmentTarget));
+            ls.AddRange(ExtractLocalVariableExpressionsHelper(tse.ValueToAssign));
+        }
+        else if (expression is LocalVariableExpression lve) ls.Add(lve);
+        else if (expression is ReturnExpression tre)
+        {
+            if (tre.ReturnValue != null) ls.AddRange(ExtractLocalVariableExpressionsHelper(tre.ReturnValue));
+        }
+        else throw new InvalidOperationException($"unsupported expression type {expression.GetType().Name}");
+        return ls;
     }
 }

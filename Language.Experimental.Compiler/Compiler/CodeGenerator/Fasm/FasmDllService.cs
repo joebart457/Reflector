@@ -13,7 +13,7 @@ internal static class FasmDllService
     }
     private struct LineHeader
     {
-        public IntPtr FilePath;
+        public nint FilePath;
         public int LineNumber;
         public int FileOffsetOrMacroCallingLine;
         public int MacroLine;
@@ -44,20 +44,6 @@ internal static class FasmDllService
         var outputFile = options.OutputPath;
         byte[] memoryBuffer = new byte[options.AssemblerOptions.MemorySize];
         var result = fasm_Assemble(generatedAssembly, memoryBuffer, options.AssemblerOptions.MemorySize, options.AssemblerOptions.PassesLimit, IntPtr.Zero);
-        if (result != FasmState.FASM_OK)
-        {
-            if (result == FasmState.FASM_ERROR) return "FASM_ERROR: please double check program entry point and symbol names";
-            if (result == FasmState.FASM_INVALID_PARAMETER) return "FASM_INVALID_PARAMETER";
-            if (result == FasmState.FASM_OUT_OF_MEMORY) return "FASM_OUT_OF_MEMORY";
-            if (result == FasmState.FASM_STACK_OVERFLOW) return "FASM_STACK_OVERFLOW";
-            if (result == FasmState.FASM_SOURCE_NOT_FOUND) return "FASM_SOURCE_NOT_FOUND";
-            if (result == FasmState.FASM_UNEXPECTED_END_OF_SOURCE) return "FASM_UNEXPECTED_END_OF_SOURCE";
-            if (result == FasmState.FASM_CANNOT_GENERATE_CODE) return "FASM_CANNOT_GENERATE_CODE";
-            if (result == FasmState.FASM_FORMAT_LIMITATIONS_EXCEEDED) return "FASM_FORMAT_LIMITATIONS_EXCEEDED";
-            if (result == FasmState.FASM_WRITE_FAILED) return "FASM_WRITE_FAILED";
-            if (result == FasmState.FASM_INVALID_DEFINITION) return "FASM_INVALID_DEFINITION";
-            return "FATAL_FASM_ERROR";
-        }
         try
         {
             var structResult = new FasmResult
@@ -66,6 +52,14 @@ internal static class FasmDllService
                 OutputLengthOrErrorCode = BitConverter.ToInt32(memoryBuffer, 4),
                 OutputDataOrErrorLine = BitConverter.ToInt32(memoryBuffer, 8),
             };
+
+            if (result != FasmState.FASM_OK)
+            {
+                var error = Marshal.PtrToStructure<LineHeader>(structResult.OutputDataOrErrorLine);
+                
+                return $"assembly error at [Ln. {error.LineNumber}] of '{options.AssemblyPath}'";
+            }
+
             var resultBuffer = new byte[structResult.OutputLengthOrErrorCode];
             Marshal.Copy(structResult.OutputDataOrErrorLine, resultBuffer, 0, structResult.OutputLengthOrErrorCode);
 
@@ -84,20 +78,6 @@ internal static class FasmDllService
         byte[] memoryBuffer = new byte[options.AssemblerOptions.MemorySize];
         var sourcePathSb = new StringBuilder(options.AssemblyPath);
         var result = fasm_AssembleFile(sourcePathSb, memoryBuffer, options.AssemblerOptions.MemorySize, options.AssemblerOptions.PassesLimit, IntPtr.Zero);
-        if (result != FasmState.FASM_OK)
-        {
-            if (result == FasmState.FASM_ERROR) return "FASM_ERROR";
-            if (result == FasmState.FASM_INVALID_PARAMETER) return "FASM_INVALID_PARAMETER";
-            if (result == FasmState.FASM_OUT_OF_MEMORY) return "FASM_OUT_OF_MEMORY";
-            if (result == FasmState.FASM_STACK_OVERFLOW) return "FASM_STACK_OVERFLOW";
-            if (result == FasmState.FASM_SOURCE_NOT_FOUND) return "FASM_SOURCE_NOT_FOUND";
-            if (result == FasmState.FASM_UNEXPECTED_END_OF_SOURCE) return "FASM_UNEXPECTED_END_OF_SOURCE";
-            if (result == FasmState.FASM_CANNOT_GENERATE_CODE) return "FASM_CANNOT_GENERATE_CODE";
-            if (result == FasmState.FASM_FORMAT_LIMITATIONS_EXCEEDED) return "FASM_FORMAT_LIMITATIONS_EXCEEDED";
-            if (result == FasmState.FASM_WRITE_FAILED) return "FASM_WRITE_FAILED";
-            if (result == FasmState.FASM_INVALID_DEFINITION) return "FASM_INVALID_DEFINITION";
-            return "FATAL_FASM_ERROR";
-        }
         try
         {
             var structResult = new FasmResult
@@ -106,6 +86,15 @@ internal static class FasmDllService
                 OutputLengthOrErrorCode = BitConverter.ToInt32(memoryBuffer, 4),
                 OutputDataOrErrorLine = BitConverter.ToInt32(memoryBuffer, 8),
             };
+
+            if (result != FasmState.FASM_OK)
+            {
+                var error = Marshal.PtrToStructure<LineHeader>(structResult.OutputDataOrErrorLine);
+                var filePath = Marshal.PtrToStringAnsi(error.FilePath);
+                if (string.IsNullOrEmpty(filePath)) filePath = options.AssemblyPath;
+                return $"assembly error at [Ln. {error.LineNumber}] of '{filePath}'";
+            }
+
             var resultBuffer = new byte[structResult.OutputLengthOrErrorCode];
             Marshal.Copy(structResult.OutputDataOrErrorLine, resultBuffer, 0, structResult.OutputLengthOrErrorCode);
 
@@ -115,6 +104,7 @@ internal static class FasmDllService
         {
             return "executable generation failed";
         }
+        
         return null;
     }
 }

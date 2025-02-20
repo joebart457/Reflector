@@ -33,6 +33,8 @@ public static class TokenTypes
     public const string Gen = "Gen";
     public const string Local = "Local";
 
+    public const string Icon = "Icon";
+
 
     // The following token types are used purely for inline assembly parsing
     public const string AssemblyInstruction = "AssemblyInstruction";

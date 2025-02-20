@@ -16,11 +16,11 @@ var startupService = new StartupService();
 //    "-sc"
 //    ];
 
-args = [
-
-    "-i", "c:\\Users\\Jimmy\\Downloads\\type test.abc", "-o", "out.exe", "-q", "-a", "out.asm"
-
-    ];
+//args = [
+//
+//    "-i", "c:\\Users\\Jimmy\\Downloads\\type test.abc", "-o", "out.exe", "-q", "-a", "out.asm"
+//
+//    ];
 
 //args = [
 //    "fasm",

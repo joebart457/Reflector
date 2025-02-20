@@ -65,6 +65,7 @@ public class StartupService
        [Option("outputPath", "o", "the desired path of the resulting binary")] string outputPath,
        [Option("compilationMemoryBuffer", "mb", "size of memory in bytes the compiler will use for assembly")] int compilationMemoryBuffer = 100000,
        [Option("assemblyPasses", "na", "number of passes the assembler is allowed to use when attempting to generate final binary")] int assemblyPasses = 100,
+       [Option("quiet", "q", "if set, no output will be logged")] bool quiet = false,
        [Option("copyright", "c", "show copyright")] bool showCopyright = false)
     {
 
@@ -84,9 +85,11 @@ public class StartupService
 
         if (result != null)
         {
-            CliLogger.LogError(result);
+            if (!quiet) CliLogger.LogError(result);
             return -1;
         }
+        if (!quiet)
+            CliLogger.LogSuccess($"{assemblyPath} -> {outputPath}");
         return 0;
     }
 

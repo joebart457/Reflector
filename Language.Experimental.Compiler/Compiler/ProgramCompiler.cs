@@ -30,6 +30,7 @@ public class X86ProgramCompiler
         resolverResult.ImportLibraries.ForEach(x => x.Compile(context));
         resolverResult.ImportedFunctions.ForEach(x => x.Compile(context));
         resolverResult.Functions.ForEach(x => x.Compile(context));
+        resolverResult.ProgramIcon?.Compile(context);
         var result = new CompilationResult(context);
         if (options.EnableOptimizations)
             _optimizer.Optimize(result);
